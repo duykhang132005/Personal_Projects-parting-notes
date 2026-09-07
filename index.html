@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Parting Notes — a music-themed tower defense" />
+  <title>Parting Notes</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- Title -->
+    <section id="screen-title" class="screen screen-title">
+      <img class="title-splash" src="assets/title-splash.png" alt="" />
+      <div class="title-scrim" aria-hidden="true"></div>
+      <div class="title-center">
+        <h1 class="title-logo">Parting <em>Notes</em></h1>
+        <button type="button" class="title-start" id="btn-adventure">
+          <span class="title-start-label">Play</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Adventure map select -->
+    <section id="screen-adventure" class="screen screen-adventure" hidden>
+      <header class="adv-header">
+        <button type="button" class="ctrl-btn" id="btn-adv-back">← Title</button>
+        <h2>Adventure</h2>
+        <p class="adv-sub">From the lawn to closing night. Clear one to unlock the next.</p>
+      </header>
+      <div id="level-list" class="level-list"></div>
+    </section>
+
+
+    <!-- Congrats (clear Closing Night) -->
+    <section id="screen-congrats" class="screen screen-congrats" hidden>
+      <div class="congrats-card">
+        <p class="congrats-kicker">Curtain call</p>
+        <h1 class="congrats-title">Congratulations!</h1>
+        <p class="congrats-body">
+          You walked the choir from the lawn to Closing Night and held the stage
+          against jazz, folk, and conductor Andy Clark. The house is on its feet.
+        </p>
+        <p class="congrats-sub">Parting Notes — adventure complete.</p>
+        <div class="congrats-actions">
+          <button type="button" class="shop-btn active" id="btn-congrats-adventure">Adventure</button>
+          <button type="button" class="shop-btn" id="btn-congrats-title">Title</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Play -->
+    <section id="screen-play" class="screen screen-play" hidden>
+      <header class="top-bar">
+        <div class="play-heading">
+          <button type="button" class="ctrl-btn" id="btn-play-back">← Adventure</button>
+          <h1 class="logo" id="level-title">Parting Notes</h1>
+        </div>
+        <div class="hud" id="hud">
+          <span data-hud="lives">Lives: 20</span>
+          <span data-hud="gold">Gold: 120</span>
+          <span data-hud="wave">Wave: — / 10</span>
+          <span data-hud="phase" class="phase">Build · press Start</span>
+        </div>
+      </header>
+
+      <main class="stage-wrap">
+        <div class="canvas-stack">
+          <canvas id="game" width="768" height="640" aria-label="Parting Notes playfield"></canvas>
+          <div id="end-overlay" class="end-overlay" hidden>
+            <div class="end-card">
+              <h2 id="end-title">Victory</h2>
+              <p id="end-msg"></p>
+              <div class="end-actions">
+                <button type="button" class="shop-btn active" id="btn-restart">Retry</button>
+                <button type="button" class="shop-btn" id="btn-to-adventure">Adventure</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls" role="group" aria-label="Game controls">
+          <button type="button" class="ctrl-btn" id="btn-start">Start wave</button>
+          <button type="button" class="ctrl-btn" id="btn-pause">Pause</button>
+          <button type="button" class="ctrl-btn" id="btn-speed">Speed ×1</button>
+          <button type="button" class="ctrl-btn" id="btn-sell" disabled>Sell (50%)</button>
+        </div>
+
+        <div id="target-panel" class="target-panel" hidden>
+          <span id="target-label" class="target-label">Targets</span>
+          <div class="target-modes" role="group" aria-label="Targeting mode">
+            <button type="button" class="ctrl-btn" data-target-mode="front">Front</button>
+            <button type="button" class="ctrl-btn" data-target-mode="back">Back</button>
+            <button type="button" class="ctrl-btn" data-target-mode="closest">Closest</button>
+            <button type="button" class="ctrl-btn" data-target-mode="strongest">Highest HP</button>
+          </div>
+        </div>
+
+        <div class="shop" role="toolbar" aria-label="Voice parts">
+          <button type="button" class="shop-btn" data-tower="soprano" title="Chain (1)">
+            <canvas class="shop-icon" data-icon="soprano" width="64" height="64" aria-hidden="true"></canvas>
+            <span class="shop-name">Soprano</span>
+            <span class="shop-role">Chain</span>
+            <span class="shop-cost" data-cost>60g</span>
+          </button>
+          <button type="button" class="shop-btn" data-tower="alto" title="Chip + buff aura; +1 gold per kill each (2)">
+            <canvas class="shop-icon" data-icon="alto" width="64" height="64" aria-hidden="true"></canvas>
+            <span class="shop-name">Alto</span>
+            <span class="shop-role">Buff · +1g/kill</span>
+            <span class="shop-cost" data-cost>55g</span>
+          </button>
+          <button type="button" class="shop-btn" data-tower="tenor" title="AoE splash (3)">
+            <canvas class="shop-icon" data-icon="tenor" width="64" height="64" aria-hidden="true"></canvas>
+            <span class="shop-name">Tenor</span>
+            <span class="shop-role">AoE</span>
+            <span class="shop-cost" data-cost>85g</span>
+          </button>
+          <button type="button" class="shop-btn" data-tower="bass" title="Sniper (4)">
+            <canvas class="shop-icon" data-icon="bass" width="64" height="64" aria-hidden="true"></canvas>
+            <span class="shop-name">Bass</span>
+            <span class="shop-role">Sniper</span>
+            <span class="shop-cost" data-cost>100g</span>
+          </button>
+        </div>
+
+        <p class="hint" id="hint">
+          Pick a singer (click again or Esc to cancel), place on open ground, then <strong>Start wave</strong>.
+          Click a placed singer to set targeting · <kbd>S</kbd> sell · Space pause.
+          <br />Jazz notes glitter and shrug heavy hits · Folk notes need big damage · each Alto adds +1g per kill.
+          Closing Night: watch for conductor <strong>Andy Clark</strong> — his cue stuns the choir.
+        </p>
+      </main>
+    </section>
+  </div>
+
+  <script src="js/sprites.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/enemies.js"></script>
+  <script src="js/projectiles.js"></script>
+  <script src="js/towers.js"></script>
+  <script src="js/waves.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
