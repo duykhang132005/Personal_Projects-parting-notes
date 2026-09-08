@@ -296,12 +296,19 @@
     return p;
   }
 
+  function getNextLevel(idOrIndex) {
+    const cur = getLevel(idOrIndex);
+    if (!cur) return null;
+    return LEVELS[cur.index + 1] || null;
+  }
+
   global.PNLevels = {
     COLS,
     ROWS,
     TILE,
     LEVELS,
     getLevel,
+    getNextLevel,
     loadProgress,
     saveProgress,
     markCleared,

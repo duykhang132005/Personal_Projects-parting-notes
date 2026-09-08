@@ -1,7 +1,7 @@
 /* Parting Notes — HUD + shop + adventure list */
 (function (global) {
   function showScreen(name) {
-    ['title', 'adventure', 'play'].forEach((id) => {
+    ['title', 'adventure', 'play', 'congrats', 'transition'].forEach((id) => {
       const el = document.getElementById('screen-' + id);
       if (el) el.hidden = id !== name;
     });

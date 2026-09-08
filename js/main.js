@@ -6,6 +6,7 @@
   let map = null;
   let director = null;
   let currentLevel = null;
+  let pendingNextLevelId = null;
   const effects = [];
 
   const state = {
@@ -64,6 +65,30 @@
     state.paused = true;
     PNUI.showScreen('adventure');
     PNUI.renderAdventure(startLevel);
+  }
+
+
+  function showLevelTransition(cleared, next) {
+    pendingNextLevelId = next ? next.id : null;
+    hideEnd();
+    state.screen = 'transition';
+    state.paused = true;
+    const kicker = document.getElementById('transition-kicker');
+    const title = document.getElementById('transition-title');
+    const fromEl = document.getElementById('transition-from');
+    const toName = document.getElementById('transition-to-name');
+    const body = document.getElementById('transition-body');
+    const cont = document.getElementById('btn-transition-continue');
+    if (kicker) kicker.textContent = 'Movement ' + ((cleared && cleared.index) + 1) + ' → ' + ((next && next.index) + 1);
+    if (title) title.textContent = 'Stage cleared';
+    if (fromEl) fromEl.textContent = cleared ? cleared.name + ' — done' : '';
+    if (toName) toName.textContent = next ? next.name : '';
+    if (body) body.textContent = next ? (next.blurb || 'The path continues.') : '';
+    if (cont) {
+      cont.hidden = !next;
+      cont.textContent = next ? 'Enter ' + next.name : 'Continue';
+    }
+    PNUI.showScreen('transition');
   }
 
   function goCongrats() {
@@ -283,6 +308,11 @@
     document.getElementById('btn-to-adventure')?.addEventListener('click', goAdventure);
     document.getElementById('btn-congrats-adventure')?.addEventListener('click', goAdventure);
     document.getElementById('btn-congrats-title')?.addEventListener('click', goTitle);
+    document.getElementById('btn-transition-continue')?.addEventListener('click', () => {
+      if (pendingNextLevelId) startLevel(pendingNextLevelId);
+      else goAdventure();
+    });
+    document.getElementById('btn-transition-adventure')?.addEventListener('click', goAdventure);
     document.getElementById('btn-restart')?.addEventListener('click', restartLevel);
 
     document.querySelectorAll('[data-tower]').forEach((btn) => {
@@ -370,7 +400,9 @@
       if (currentLevel && (currentLevel.id === 'closing' || currentLevel.index === 9)) {
         goCongrats();
       } else {
-        showEnd('Victory', state.message);
+        const next = PNLevels.getNextLevel(currentLevel.id);
+        if (next) showLevelTransition(currentLevel, next);
+        else showEnd('Victory', state.message);
       }
     }
 
