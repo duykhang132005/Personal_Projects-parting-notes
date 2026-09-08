@@ -36,3 +36,15 @@ Per-tower targeting: Front / Back / Closest / Highest HP.
 ## Stack
 
 Vanilla HTML, CSS, and JS. MIT — see [LICENSE](LICENSE).
+
+## Audio
+
+- **SFX:** procedural Web Audio (`js/audio.js`) — place, sell, wave start, hits (pitched by voice part), kills, jazz CAP shimmer, folk BLOCK thud, life leak, win/lose, Andy conductor cue, UI clicks.
+- **BGM:** optional public-domain file in `assets/audio/` (e.g. `fair-harvard.mp3`) for the title screen; otherwise a soft procedural choral-ish pad / arpeggio (college-song atmosphere, not a rip). Play bed is the same pad, ducked.
+- Mute toggles persist as `parting-notes-mute`.
+- We do **not** redistribute modern Harvard Glee Club / Spotify / YouTube recordings. For listening, visit [harvardgleeclub.org](https://harvardgleeclub.org). See `assets/audio/README.md` for attribution if you add a PD track.
+
+## First-run tips
+
+Lawn Approach shows a short onboarding overlay once. Dismiss or **Don’t show again** (`parting-notes-seen-tips`).
+

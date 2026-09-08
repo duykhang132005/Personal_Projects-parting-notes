@@ -20,6 +20,7 @@
         <button type="button" class="title-start" id="btn-adventure">
           <span class="title-start-label">Play</span>
         </button>
+        <button type="button" class="mute-btn title-mute" data-mute-btn aria-pressed="false" title="Mute sound">Mute</button>
       </div>
     </section>
 
@@ -103,6 +104,7 @@
           <button type="button" class="ctrl-btn" id="btn-pause">Pause</button>
           <button type="button" class="ctrl-btn" id="btn-speed">Speed ×1</button>
           <button type="button" class="ctrl-btn" id="btn-sell" disabled>Sell (50%)</button>
+          <button type="button" class="ctrl-btn mute-btn" data-mute-btn aria-pressed="false" title="Mute sound">Mute</button>
         </div>
 
         <div id="target-panel" class="target-panel" hidden>
@@ -120,25 +122,25 @@
             <canvas class="shop-icon" data-icon="soprano" width="64" height="64" aria-hidden="true"></canvas>
             <span class="shop-name">Soprano</span>
             <span class="shop-role">Chain</span>
-            <span class="shop-cost" data-cost>60g</span>
+            <span class="shop-cost" data-cost="50">50g</span>
           </button>
           <button type="button" class="shop-btn" data-tower="alto" title="Chip + buff aura; +1 gold per kill each (2)">
             <canvas class="shop-icon" data-icon="alto" width="64" height="64" aria-hidden="true"></canvas>
             <span class="shop-name">Alto</span>
             <span class="shop-role">Buff · +1g/kill</span>
-            <span class="shop-cost" data-cost>55g</span>
+            <span class="shop-cost" data-cost="85">85g</span>
           </button>
           <button type="button" class="shop-btn" data-tower="tenor" title="AoE splash (3)">
             <canvas class="shop-icon" data-icon="tenor" width="64" height="64" aria-hidden="true"></canvas>
             <span class="shop-name">Tenor</span>
             <span class="shop-role">AoE</span>
-            <span class="shop-cost" data-cost>85g</span>
+            <span class="shop-cost" data-cost="75">75g</span>
           </button>
           <button type="button" class="shop-btn" data-tower="bass" title="Sniper (4)">
             <canvas class="shop-icon" data-icon="bass" width="64" height="64" aria-hidden="true"></canvas>
             <span class="shop-name">Bass</span>
             <span class="shop-role">Sniper</span>
-            <span class="shop-cost" data-cost>100g</span>
+            <span class="shop-cost" data-cost="100">100g</span>
           </button>
         </div>
 
@@ -150,6 +152,34 @@
         </p>
       </main>
     </section>
+
+    <!-- First-run onboarding (Lawn Approach) -->
+    <div id="onboard-overlay" class="onboard-overlay" hidden>
+      <div class="onboard-card" role="dialog" aria-labelledby="onboard-title">
+        <p class="onboard-kicker">Lawn Approach · first call</p>
+        <h2 id="onboard-title" class="onboard-title">Warm-up tips</h2>
+
+        <div data-tip-step="0">
+          <p class="onboard-body"><strong>1. Pick Soprano</strong> — tap the Soprano seat in the shop (hotkey <kbd>1</kbd>). Chain lines for Fair Harvard energy.</p>
+        </div>
+        <div data-tip-step="1" hidden>
+          <p class="onboard-body"><strong>2. Place</strong> — click open grass beside the path. Ghost range shows where she’ll sing.</p>
+        </div>
+        <div data-tip-step="2" hidden>
+          <p class="onboard-body"><strong>3. Start wave</strong> — when the lawn is set, press <strong>Start wave</strong>. Notes march toward the hall.</p>
+        </div>
+        <div data-tip-step="3" hidden>
+          <p class="onboard-body"><strong>4. Targeting (optional)</strong> — click a placed singer to choose Front / Back / Closest / Highest HP. Later stages tip a hat to Abendlied, Glorious Apollo, and closing-night cues.</p>
+        </div>
+
+        <div class="onboard-actions">
+          <button type="button" class="shop-btn active" id="btn-tip-next">Next</button>
+          <button type="button" class="shop-btn" id="btn-tip-dismiss">Dismiss</button>
+          <button type="button" class="shop-btn" id="btn-tip-never">Don’t show again</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script src="js/sprites.js"></script>
@@ -160,6 +190,7 @@
   <script src="js/towers.js"></script>
   <script src="js/waves.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/audio.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

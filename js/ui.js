@@ -56,7 +56,10 @@
       btn.classList.toggle('active', state.selectedType === id);
       btn.disabled = !def;
       const cost = btn.querySelector('[data-cost]');
-      if (cost && def) cost.textContent = def.cost + 'g';
+      if (cost && def) {
+        cost.setAttribute('data-cost', String(def.cost));
+        cost.textContent = def.cost + 'g';
+      }
       if (def && state.gold < def.cost) btn.classList.add('cant-afford');
       else btn.classList.remove('cant-afford');
     });

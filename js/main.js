@@ -8,6 +8,63 @@
   let currentLevel = null;
   let pendingNextLevelId = null;
   const effects = [];
+  const TIPS_KEY = 'parting-notes-seen-tips';
+
+  function audio() {
+    return typeof PNAudio !== 'undefined' ? PNAudio : null;
+  }
+
+  function spawnFloat(x, y, text, color, life) {
+    effects.push({
+      kind: 'float',
+      x: x,
+      y: y,
+      text: text,
+      color: color || '#f3efe4',
+      life: life != null ? life : 0.7,
+      maxLife: life != null ? life : 0.7,
+      vy: -28,
+    });
+  }
+
+  function tipsSeen() {
+    try {
+      return localStorage.getItem(TIPS_KEY) === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function markTipsSeen() {
+    try {
+      localStorage.setItem(TIPS_KEY, '1');
+    } catch (_) {}
+  }
+
+  function hideOnboarding() {
+    const ov = document.getElementById('onboard-overlay');
+    if (ov) {
+      ov.hidden = true;
+      ov.classList.remove('visible');
+    }
+  }
+
+  function showOnboardingIfNeeded(level) {
+    if (!level || level.id !== 'approach') return;
+    if (tipsSeen()) return;
+    const ov = document.getElementById('onboard-overlay');
+    if (!ov) return;
+    ov.hidden = false;
+    ov.classList.add('visible');
+    // Reset to first step
+    ov.querySelectorAll('[data-tip-step]').forEach(function (el, i) {
+      el.hidden = i !== 0;
+    });
+    ov.dataset.step = '0';
+    const nextBtn = document.getElementById('btn-tip-next');
+    if (nextBtn) nextBtn.textContent = 'Next';
+  }
+
 
   const state = {
     screen: 'title',
@@ -51,20 +108,29 @@
       ov.hidden = false;
       ov.classList.add('visible');
     }
+    const a = audio();
+    if (a) {
+      if (kind === 'Victory') a.win();
+      else if (kind === 'Defeat') a.lose();
+    }
   }
 
   function goTitle() {
     state.screen = 'title';
     state.paused = true;
+    hideOnboarding();
     PNUI.showScreen('title');
     requestAnimationFrame(() => PNUI.paintTitleArt());
+    const a = audio();
   }
 
   function goAdventure() {
     state.screen = 'adventure';
     state.paused = true;
+    hideOnboarding();
     PNUI.showScreen('adventure');
     PNUI.renderAdventure(startLevel);
+    const a = audio();
   }
 
 
@@ -73,6 +139,10 @@
     hideEnd();
     state.screen = 'transition';
     state.paused = true;
+    const ax = audio();
+    if (ax) {
+      ax.win();
+    }
     const kicker = document.getElementById('transition-kicker');
     const title = document.getElementById('transition-title');
     const fromEl = document.getElementById('transition-from');
@@ -96,6 +166,10 @@
     state.paused = true;
     hideEnd();
     PNUI.showScreen('congrats');
+    const a = audio();
+    if (a) {
+      a.win();
+    }
   }
 
   function startLevel(levelId) {
@@ -133,6 +207,11 @@
     PNUI.renderHud(state, director);
     PNUI.syncShop(state);
     PNUI.syncControls(state, director);
+    const a = audio();
+    if (a) {
+      a.syncMuteButtons();
+    }
+    showOnboardingIfNeeded(level);
   }
 
   function restartLevel() {
@@ -161,16 +240,42 @@
     return n * 1;
   }
 
-  function applyDamage(enemy, amount) {
+  function applyDamage(enemy, amount, meta) {
     if (!enemy || !enemy.alive) return false;
+    const raw = amount;
     const filtered = PNEnemies.filterDamage
       ? PNEnemies.filterDamage(enemy, amount)
       : amount;
+    const part = (meta && (meta.kind || (meta.fromTower && meta.fromTower.kind))) || null;
+    const a = audio();
+    const fxX = enemy.x + (Math.random() * 10 - 5);
+    const fxY = enemy.y - 12;
+
+    // Jazz cap / folk block feedback
+    let specialSfx = false;
+    if (!enemy.isBoss && enemy.style === 'jazz' && raw > (PNEnemies.JAZZ_CAP || 10)) {
+      spawnFloat(fxX, fxY - 8, 'CAP', '#e8c547', 0.75);
+      if (a) a.jazzCapped();
+      specialSfx = true;
+    } else if (!enemy.isBoss && enemy.style === 'folk' && filtered <= 0 && raw > 0) {
+      spawnFloat(fxX, fxY - 8, 'BLOCK', '#a67c52', 0.75);
+      if (a) a.folkBlocked();
+      return false;
+    }
+
     if (filtered <= 0) return false;
+
+    if (a && !specialSfx) a.hit(part);
+    // Light optional damage number (skip when CAP floater already up)
+    if (!specialSfx && filtered >= 8) {
+      spawnFloat(fxX + 6, fxY + 4, String(Math.round(filtered)), '#f3efe4', 0.55);
+    }
+
     enemy.hp -= filtered;
     if (enemy.hp <= 0) {
       enemy.alive = false;
       state.gold += (enemy.gold || 0) + altoGoldBonus();
+      if (a) a.kill();
       return true;
     }
     return false;
@@ -194,15 +299,16 @@
     const hit = p.target && p.target.alive ? p.target : null;
     const splashR = p.splash || 0;
 
+    const meta = { kind: p.kind, fromTower: p.fromTower };
     if (splashR > 0) {
       effects.push({ x: p.x, y: p.y, r: splashR, life: 0.25, color: p.color });
       for (const e of livingEnemies()) {
         if (Math.hypot(e.x - p.x, e.y - p.y) <= splashR) {
-          applyDamage(e, p.damage);
+          applyDamage(e, p.damage, meta);
         }
       }
     } else if (hit) {
-      applyDamage(hit, p.damage);
+      applyDamage(hit, p.damage, meta);
     }
 
     if (p.chainLeft > 0 && hit) {
@@ -253,6 +359,8 @@
     state.occupied[key] = tower;
     state.selectedTower = tower;
     state.selectedType = null;
+    const a = audio();
+    if (a) a.place();
   }
 
   function sellSelected() {
@@ -263,6 +371,8 @@
     state.towers = state.towers.filter((x) => x !== t);
     delete state.occupied[key];
     state.selectedTower = null;
+    const a = audio();
+    if (a) a.sell();
   }
 
   function cellFromEvent(ev) {
@@ -302,9 +412,21 @@
   });
 
   function bindControls() {
-    document.getElementById('btn-adventure')?.addEventListener('click', goAdventure);
-    document.getElementById('btn-adv-back')?.addEventListener('click', goTitle);
-    document.getElementById('btn-play-back')?.addEventListener('click', goAdventure);
+    document.getElementById('btn-adventure')?.addEventListener('click', () => {
+      const a = audio();
+      if (a) a.uiClick();
+      goAdventure();
+    });
+    document.getElementById('btn-adv-back')?.addEventListener('click', () => {
+      const a = audio();
+      if (a) a.uiClick();
+      goTitle();
+    });
+    document.getElementById('btn-play-back')?.addEventListener('click', () => {
+      const a = audio();
+      if (a) a.uiClick();
+      goAdventure();
+    });
     document.getElementById('btn-to-adventure')?.addEventListener('click', goAdventure);
     document.getElementById('btn-congrats-adventure')?.addEventListener('click', goAdventure);
     document.getElementById('btn-congrats-title')?.addEventListener('click', goTitle);
@@ -315,10 +437,46 @@
     document.getElementById('btn-transition-adventure')?.addEventListener('click', goAdventure);
     document.getElementById('btn-restart')?.addEventListener('click', restartLevel);
 
+    document.querySelectorAll('[data-mute-btn]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const a = audio();
+        if (!a) return;
+        a.toggleMute();
+      });
+    });
+
+    document.getElementById('btn-tip-next')?.addEventListener('click', () => {
+      const a = audio();
+      if (a) a.uiClick();
+      const ov = document.getElementById('onboard-overlay');
+      if (!ov) return;
+      const steps = Array.from(ov.querySelectorAll('[data-tip-step]'));
+      let i = parseInt(ov.dataset.step || '0', 10);
+      if (i < steps.length - 1) {
+        steps[i].hidden = true;
+        i += 1;
+        steps[i].hidden = false;
+        ov.dataset.step = String(i);
+        const nextBtn = document.getElementById('btn-tip-next');
+        if (nextBtn && i === steps.length - 1) nextBtn.textContent = 'Got it';
+      } else {
+        hideOnboarding();
+      }
+    });
+    document.getElementById('btn-tip-dismiss')?.addEventListener('click', () => {
+      hideOnboarding();
+    });
+    document.getElementById('btn-tip-never')?.addEventListener('click', () => {
+      markTipsSeen();
+      hideOnboarding();
+    });
+
     document.querySelectorAll('[data-tower]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-tower');
         if (!PNTowers.DEFS[id]) return;
+        const a = audio();
+        if (a) a.uiClick();
         state.selectedType = state.selectedType === id ? null : id;
         if (state.selectedType) state.selectedTower = null;
         PNUI.syncShop(state);
@@ -329,6 +487,8 @@
       btn.addEventListener('click', () => {
         const mode = btn.getAttribute('data-target-mode');
         if (!state.selectedTower || !mode) return;
+        const a = audio();
+        if (a) a.uiClick();
         state.selectedTower.targetMode = mode;
         PNUI.syncShop(state);
       });
@@ -336,8 +496,18 @@
 
     document.getElementById('btn-start')?.addEventListener('click', () => {
       if (state.status !== 'playing' || !director) return;
-      if (director.phase === 'between') director.skipBetween();
-      else if (director.phase === 'ready') director.begin();
+      let started = false;
+      if (director.phase === 'between') {
+        director.skipBetween();
+        started = true;
+      } else if (director.phase === 'ready') {
+        director.begin();
+        started = true;
+      }
+      if (started) {
+        const a = audio();
+        if (a) a.startWave();
+      }
       PNUI.syncControls(state, director);
     });
 
@@ -414,6 +584,8 @@
         // Boss leaking costs more lives
         const leak = e.isBoss ? 5 : 1;
         state.lives = Math.max(0, state.lives - leak);
+        const a = audio();
+        if (a) a.lifeLeak();
         if (state.lives <= 0) {
           state.status = 'lost';
           state.message = e.isBoss
@@ -422,16 +594,20 @@
           showEnd('Defeat', state.message);
         }
       }
-      // Conductor cue: stun every tower briefly
+      // Conductor cue: stronger 0.4s wind-up flash + stun
       if (PNEnemies.tickBossSing && PNEnemies.tickBossSing(e, scaled)) {
+        e.singFlash = Math.max(e.singFlash || 0, 0.4);
         PNTowers.stunAll(state.towers, e.stunDuration || 0.5);
         effects.push({
           kind: 'baton',
           x: e.x,
           y: e.y - 20,
           life: 0.4,
+          maxLife: 0.4,
           color: '#e8c547',
         });
+        const a = audio();
+        if (a) a.andyCue();
       }
     }
 
@@ -454,8 +630,12 @@
     state.enemies = state.enemies.filter((e) => e.alive);
 
     for (let i = effects.length - 1; i >= 0; i--) {
-      effects[i].life -= scaled;
-      if (effects[i].life <= 0) effects.splice(i, 1);
+      const fx = effects[i];
+      fx.life -= scaled;
+      if (fx.kind === 'float') {
+        fx.y += (fx.vy || -28) * scaled;
+      }
+      if (fx.life <= 0) effects.splice(i, 1);
     }
 
     PNUI.renderHud(state, director);
@@ -488,24 +668,48 @@
     for (const p of state.projectiles) PNProjectiles.drawProjectile(ctx, p);
 
     for (const fx of effects) {
+      if (fx.kind === 'float') {
+        const maxL = fx.maxLife || 0.7;
+        const a = Math.max(0, fx.life / maxL);
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, a * 1.2);
+        ctx.font = 'bold 13px Georgia, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(20,10,8,0.85)';
+        ctx.strokeText(fx.text, fx.x, fx.y);
+        ctx.fillStyle = fx.color || '#f3efe4';
+        ctx.fillText(fx.text, fx.x, fx.y);
+        ctx.restore();
+        continue;
+      }
       if (fx.kind === 'baton') {
-        const a = Math.max(0, fx.life / 0.4);
-        const g = ctx.createRadialGradient(fx.x, fx.y, 2, fx.x, fx.y, 60);
-        g.addColorStop(0, 'rgba(255,240,180,' + (0.55 * a) + ')');
+        const maxL = fx.maxLife || 0.4;
+        const a = Math.max(0, fx.life / maxL);
+        const pulse = 70 + (1 - a) * 30;
+        const g = ctx.createRadialGradient(fx.x, fx.y, 2, fx.x, fx.y, pulse);
+        g.addColorStop(0, 'rgba(255,240,180,' + (0.7 * a) + ')');
+        g.addColorStop(0.45, 'rgba(232,197,71,' + (0.35 * a) + ')');
         g.addColorStop(1, 'rgba(255,240,180,0)');
         ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.arc(fx.x, fx.y, 60, 0, Math.PI * 2);
+        ctx.arc(fx.x, fx.y, pulse, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(232,197,71,' + (0.7 * a) + ')';
+        ctx.strokeStyle = 'rgba(232,197,71,' + (0.85 * a) + ')';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(fx.x, fx.y, 28 + (1 - a) * 28, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,' + (0.45 * a) + ')';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(fx.x, fx.y, 28 + (1 - a) * 20, 0, Math.PI * 2);
+        ctx.arc(fx.x, fx.y, 18 + (1 - a) * 12, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.font = 'bold 16px Georgia, system-ui, sans-serif';
+        ctx.font = 'bold 17px Georgia, system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillStyle = 'rgba(243,239,228,' + a + ')';
-        ctx.fillText('♪ Cue!', fx.x, fx.y - 36);
+        ctx.fillText('♪ Cue!', fx.x, fx.y - 40);
         continue;
       }
       const a = Math.max(0, fx.life / 0.25);
