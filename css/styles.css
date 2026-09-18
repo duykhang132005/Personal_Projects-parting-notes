@@ -622,6 +622,21 @@ kbd {
   align-items: center;
 }
 
+
+.title-credit {
+  margin: 0.85rem 0 0;
+  max-width: 22rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--cream-soft);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+  opacity: 0.92;
+}
+.title-credit a {
+  color: #e8c547;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .title-start.title-dict {
   min-width: 10.5rem;
   padding: 0.85rem 1.85rem;

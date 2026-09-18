@@ -1,10 +1,15 @@
-# Audio assets
+﻿# Audio assets
 
 ## Current
-- **SFX only** — procedural Web Audio in `js/audio.js`. Background music is disabled in code.
-- `fair-harvard.mp3` may still be present (PD 1913 LOC Fair Harvard) but is **not played** until you re-enable BGM.
+- **SFX** — procedural Web Audio in `js/audio.js`.
+- **BGM** — enabled; prefers files in `repertoire/`, then `fair-harvard.mp3` (PD Fair Harvard), then a soft procedural pad.
+- Spotify HGC2627 is for inspiration/credits only — do not rip streams into this folder.
 
-## Adding your soundtracks later
-Drop files here (e.g. `title.mp3`, `play.mp3`) and re-enable `bgmStart` in `js/audio.js` / calls in `main.js`. Prefer tracks you have rights to use.
+## Adding repertoire tracks
+Drop legally usable mp3/ogg files into `repertoire/` using prefixes:
+- `title-` — title screen
+- `adventure-` — adventure map
+- `play-` — in-level (ducked under SFX)
+- `closing-` — optional heavier/solemn bed (falls back to play/title)
 
-Modern Harvard Glee Club concert recordings: listen at https://harvardgleeclub.org/ — do not redistribute without permission.
+See `repertoire/README.md` for HGC2627 mood mapping.

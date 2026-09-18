@@ -138,6 +138,8 @@
     state.paused = true;
     hideOnboarding();
     PNUI.showScreen('title');
+    const a = audio();
+    if (a && a.bgmStart) a.bgmStart('title');
     requestAnimationFrame(() => PNUI.paintTitleArt());
   }
 
@@ -147,6 +149,8 @@
     state.paused = true;
     hideOnboarding();
     PNUI.showScreen('adventure');
+    const a = audio();
+    if (a && a.bgmStart) a.bgmStart('adventure');
     PNUI.renderAdventure(startLevel);
   }
 
@@ -158,6 +162,8 @@
     state.paused = true;
     hideOnboarding();
     PNUI.showScreen('dictionary');
+    const a = audio();
+    if (a && a.bgmStart) a.bgmStart('title');
     PNUI.renderDictionary({ tab: 'singers' });
   }
 
@@ -209,6 +215,7 @@
     PNUI.showScreen('congrats');
     const a = audio();
     if (a) {
+      if (a.bgmStart) a.bgmStart('title');
       a.win();
     }
   }
@@ -245,6 +252,11 @@
 
     PNUI.resetShopIcons();
     PNUI.showScreen('play');
+    const aBgm = audio();
+    if (aBgm && aBgm.bgmStart) {
+      const bed = level && (level.id === 'closing' || level.index === 9) ? 'closing' : 'play';
+      aBgm.bgmStart(bed);
+    }
     PNUI.renderHud(state, director);
     PNUI.syncShop(state);
     PNUI.syncControls(state, director);

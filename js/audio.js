@@ -1,4 +1,4 @@
-/* Parting Notes — procedural Web Audio SFX (BGM off until user adds tracks) */
+/* Parting Notes — procedural Web Audio SFX + optional repertoire BGM */
 (function (global) {
   const MUTE_KEY = 'parting-notes-mute';
 
@@ -9,9 +9,39 @@
   let sfxGain = null;
   let bgmGain = null;
   let bgmNodes = null;
-  let bgmMode = null; // 'title' | 'play' | null
+  let bgmMode = null; // 'title' | 'adventure' | 'play' | 'closing' | null
   let htmlBgm = null;
-  let pdAvailable = null; // null = unchecked, false = none, string = url
+  let trackCache = {}; // mode -> url|false
+  // Candidate files to probe (browsers cannot list folders). Drop legal tracks into repertoire/.
+  const BGM_CANDIDATES = {
+    title: [
+      'assets/audio/repertoire/title-01.mp3',
+      'assets/audio/repertoire/title-01.ogg',
+      'assets/audio/repertoire/glorious-apollo.mp3',
+      'assets/audio/fair-harvard.mp3',
+      'assets/audio/fair-harvard.ogg',
+    ],
+    adventure: [
+      'assets/audio/repertoire/adventure-01.mp3',
+      'assets/audio/repertoire/adventure-01.ogg',
+      'assets/audio/repertoire/abendlied.mp3',
+      'assets/audio/repertoire/o-vos-omnes.mp3',
+    ],
+    play: [
+      'assets/audio/repertoire/play-01.mp3',
+      'assets/audio/repertoire/play-01.ogg',
+      'assets/audio/repertoire/football-songs.mp3',
+    ],
+    closing: [
+      'assets/audio/repertoire/closing-01.mp3',
+      'assets/audio/repertoire/closing-01.ogg',
+      'assets/audio/repertoire/come-ye-disconsolate.mp3',
+    ],
+  };
+  const BGM_FALLBACK = [
+    'assets/audio/fair-harvard.mp3',
+    'assets/audio/fair-harvard.ogg',
+  ];
 
   try {
     muted = localStorage.getItem(MUTE_KEY) === '1';
@@ -293,57 +323,81 @@
     } catch (_) {}
   }
 
-  function findPdTrack(done) {
-    if (pdAvailable !== null) {
-      done(pdAvailable || null);
-      return;
-    }
-    const candidates = [
-      'assets/audio/fair-harvard.mp3',
-      'assets/audio/fair-harvard.ogg',
-      'assets/audio/fair_harvard.mp3',
-      'assets/audio/bgm.mp3',
-      'assets/audio/title.mp3',
-    ];
+  function probeUrl(url, done) {
+    const a = new Audio();
+    let settled = false;
+    const finish = function (ok) {
+      if (settled) return;
+      settled = true;
+      a.oncanplaythrough = null;
+      a.onerror = null;
+      done(ok ? url : null);
+    };
+    a.preload = 'metadata';
+    a.oncanplaythrough = function () {
+      finish(true);
+    };
+    a.onerror = function () {
+      finish(false);
+    };
+    a.src = url;
+    setTimeout(function () {
+      if (!settled) finish(a.readyState >= 1);
+    }, 450);
+  }
+
+  function probeList(list, done) {
     let i = 0;
-    function tryNext() {
-      if (i >= candidates.length) {
-        pdAvailable = false;
+    function next() {
+      if (i >= list.length) {
         done(null);
         return;
       }
-      const url = candidates[i++];
-      const a = new Audio();
-      let settled = false;
-      const finish = function (ok) {
-        if (settled) return;
-        settled = true;
-        a.oncanplaythrough = null;
-        a.onerror = null;
-        if (ok) {
-          pdAvailable = url;
-          done(url);
-        } else {
-          tryNext();
-        }
-      };
-      a.preload = 'metadata';
-      a.oncanplaythrough = function () {
-        finish(true);
-      };
-      a.onerror = function () {
-        finish(false);
-      };
-      a.src = url;
-      // Some browsers never fire without play attempt; timeout fallback
-      setTimeout(function () {
-        if (!settled) {
-          // readyState >= 1 means metadata at least
-          finish(a.readyState >= 1);
-        }
-      }, 400);
+      const url = list[i++];
+      probeUrl(url, function (ok) {
+        if (ok) done(ok);
+        else next();
+      });
     }
-    tryNext();
+    next();
+  }
+
+  function candidatesFor(mode) {
+    const m = mode === 'play' || mode === 'adventure' || mode === 'closing' ? mode : 'title';
+    const primary = (BGM_CANDIDATES[m] || []).slice();
+    const chain =
+      m === 'closing'
+        ? primary.concat(BGM_CANDIDATES.play || [], BGM_CANDIDATES.adventure || [], BGM_CANDIDATES.title || [], BGM_FALLBACK)
+        : m === 'play'
+          ? primary.concat(BGM_CANDIDATES.title || [], BGM_FALLBACK)
+          : m === 'adventure'
+            ? primary.concat(BGM_CANDIDATES.title || [], BGM_FALLBACK)
+            : primary.concat(BGM_FALLBACK);
+    const seen = {};
+    const out = [];
+    chain.forEach(function (u) {
+      if (!seen[u]) {
+        seen[u] = true;
+        out.push(u);
+      }
+    });
+    return out;
+  }
+
+  function findTrack(mode, done) {
+    const key = mode === 'play' || mode === 'adventure' || mode === 'closing' ? mode : 'title';
+    if (trackCache[key] === false) {
+      done(null);
+      return;
+    }
+    if (typeof trackCache[key] === 'string') {
+      done(trackCache[key]);
+      return;
+    }
+    probeList(candidatesFor(key), function (url) {
+      trackCache[key] = url || false;
+      done(url || null);
+    });
   }
 
   function startProceduralPad(duck) {
@@ -410,49 +464,61 @@
   }
 
   function bgmStart(mode) {
-    /* BGM disabled for now — SFX only; drop tracks in assets/audio later */
-    return;
-    // unreachable legacy path kept below for easy re-enable
-
     ensureCtx();
-    const next = mode === 'play' ? 'play' : 'title';
+    const next =
+      mode === 'play' || mode === 'adventure' || mode === 'closing' ? mode : 'title';
+    const duck = next === 'play' || next === 'closing';
     if (bgmMode === next && (bgmNodes || htmlBgm)) {
-      // Re-duck if needed
-      if (bgmGain) bgmGain.gain.value = next === 'play' ? 0.1 : 0.22;
+      if (bgmGain) bgmGain.gain.value = duck ? 0.1 : 0.2;
+      if (htmlBgm) htmlBgm.volume = duck ? 0.28 : 0.42;
       return;
     }
     bgmStop();
     bgmMode = next;
-    if (bgmGain) bgmGain.gain.value = next === 'play' ? 0.1 : 0.22;
+    if (bgmGain) bgmGain.gain.value = duck ? 0.1 : 0.2;
 
-    findPdTrack(function (url) {
-      if (bgmMode !== next) return;
-      if (url && next === 'title') {
-        try {
-          if (!htmlBgm) {
-            htmlBgm = new Audio(url);
-            htmlBgm.loop = true;
-            htmlBgm.volume = 0.45;
-          } else {
-            htmlBgm.src = url;
-          }
-          htmlBgm.muted = muted;
-          if (unlocked && !muted) {
-            htmlBgm.play().catch(function () {
-              // Fall back to procedural if autoplay blocked mid-stream
-              startProceduralPad(false);
-            });
-          }
-          return;
-        } catch (_) {}
+    function playHtml(url) {
+      try {
+        if (!htmlBgm) {
+          htmlBgm = new Audio(url);
+          htmlBgm.loop = true;
+        } else if (htmlBgm.src.indexOf(url) === -1) {
+          htmlBgm.src = url;
+        }
+        htmlBgm.volume = duck ? 0.28 : 0.42;
+        htmlBgm.muted = muted;
+        if (unlocked && !muted) {
+          htmlBgm.play().catch(function () {
+            startProceduralPad(duck);
+          });
+        } else {
+          const wait = function () {
+            if (!unlocked || bgmMode !== next) return;
+            document.removeEventListener('pointerdown', wait, true);
+            if (!muted && htmlBgm) {
+              htmlBgm.play().catch(function () {
+                startProceduralPad(duck);
+              });
+            }
+          };
+          document.addEventListener('pointerdown', wait, true);
+        }
+      } catch (_) {
+        startProceduralPad(duck);
       }
-      // Procedural soft choral-ish pad / arpeggio (title or play bed)
-      if (unlocked) startProceduralPad(next === 'play');
+    }
+
+    findTrack(next, function (url) {
+      if (bgmMode !== next) return;
+      if (url) {
+        playHtml(url);
+        return;
+      }
+      if (unlocked) startProceduralPad(duck);
       else {
-        // Start after unlock
         const wait = function () {
           if (!unlocked || bgmMode !== next) return;
-          startProceduralPad(next === 'play');
+          startProceduralPad(duck);
           document.removeEventListener('pointerdown', wait, true);
         };
         document.addEventListener('pointerdown', wait, true);
