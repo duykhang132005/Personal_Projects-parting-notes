@@ -11,6 +11,7 @@
   let bgmNodes = null;
   let bgmMode = null; // 'title' | 'adventure' | 'play' | 'closing' | null
   let htmlBgm = null;
+  let htmlBgmUrl = null; // relative path currently loaded
   let trackCache = {}; // mode -> url|false
   // Candidate files to probe (browsers cannot list folders). Drop legal tracks into repertoire/.
   const BGM_CANDIDATES = {
@@ -315,12 +316,27 @@
     bgmNodes = null;
   }
 
-  function stopHtmlBgm() {
+  function stopHtmlBgm(reset) {
     if (!htmlBgm) return;
     try {
       htmlBgm.pause();
-      htmlBgm.currentTime = 0;
+      if (reset) {
+        htmlBgm.currentTime = 0;
+        htmlBgmUrl = null;
+      }
     } catch (_) {}
+  }
+
+  function applyBgmLevels(duck) {
+    if (bgmGain) bgmGain.gain.value = duck ? 0.1 : 0.2;
+    if (htmlBgm) htmlBgm.volume = duck ? 0.28 : 0.42;
+  }
+
+  function sameBgmUrl(url) {
+    if (!url) return false;
+    if (htmlBgmUrl && htmlBgmUrl === url) return true;
+    if (htmlBgm && htmlBgm.src && htmlBgm.src.indexOf(url) !== -1) return true;
+    return false;
   }
 
   function probeUrl(url, done) {
@@ -468,41 +484,50 @@
     const next =
       mode === 'play' || mode === 'adventure' || mode === 'closing' ? mode : 'title';
     const duck = next === 'play' || next === 'closing';
-    if (bgmMode === next && (bgmNodes || htmlBgm)) {
-      if (bgmGain) bgmGain.gain.value = duck ? 0.1 : 0.2;
-      if (htmlBgm) htmlBgm.volume = duck ? 0.28 : 0.42;
-      return;
-    }
-    bgmStop();
     bgmMode = next;
-    if (bgmGain) bgmGain.gain.value = duck ? 0.1 : 0.2;
+    applyBgmLevels(duck);
 
-    function playHtml(url) {
+    function ensurePlayingHtml() {
+      if (!htmlBgm) return;
+      htmlBgm.muted = muted;
+      applyBgmLevels(duck);
+      if (unlocked && !muted && htmlBgm.paused) {
+        htmlBgm.play().catch(function () {
+          /* keep silent / procedural fallback only if nothing playing */
+        });
+      }
+    }
+
+    function switchHtmlTrack(url, continueAt) {
+      stopProceduralBgm();
+      const t = continueAt != null ? continueAt : 0;
       try {
         if (!htmlBgm) {
-          htmlBgm = new Audio(url);
+          htmlBgm = new Audio();
           htmlBgm.loop = true;
-        } else if (htmlBgm.src.indexOf(url) === -1) {
-          htmlBgm.src = url;
         }
-        htmlBgm.volume = duck ? 0.28 : 0.42;
-        htmlBgm.muted = muted;
-        if (unlocked && !muted) {
-          htmlBgm.play().catch(function () {
-            startProceduralPad(duck);
-          });
-        } else {
-          const wait = function () {
-            if (!unlocked || bgmMode !== next) return;
-            document.removeEventListener('pointerdown', wait, true);
-            if (!muted && htmlBgm) {
-              htmlBgm.play().catch(function () {
-                startProceduralPad(duck);
-              });
-            }
+        const needLoad = !sameBgmUrl(url);
+        if (needLoad) {
+          const onMeta = function () {
+            htmlBgm.removeEventListener('loadedmetadata', onMeta);
+            try {
+              const dur = htmlBgm.duration;
+              if (dur && isFinite(dur) && dur > 0) {
+                htmlBgm.currentTime = ((t % dur) + dur) % dur;
+              }
+            } catch (_) {}
+            ensurePlayingHtml();
           };
-          document.addEventListener('pointerdown', wait, true);
+          htmlBgm.addEventListener('loadedmetadata', onMeta);
+          htmlBgm.src = url;
+          htmlBgmUrl = url;
+          // If metadata already cached
+          if (htmlBgm.readyState >= 1) onMeta();
+        } else {
+          ensurePlayingHtml();
         }
+        htmlBgm.muted = muted;
+        applyBgmLevels(duck);
       } catch (_) {
         startProceduralPad(duck);
       }
@@ -510,15 +535,38 @@
 
     findTrack(next, function (url) {
       if (bgmMode !== next) return;
+      applyBgmLevels(duck);
+
       if (url) {
-        playHtml(url);
+        // Same song already running — only retune volume for the new backdrop.
+        if (sameBgmUrl(url) && htmlBgm && !htmlBgm.paused) {
+          stopProceduralBgm();
+          ensurePlayingHtml();
+          return;
+        }
+        if (sameBgmUrl(url) && htmlBgm) {
+          stopProceduralBgm();
+          ensurePlayingHtml();
+          return;
+        }
+        // Different song: keep wall-clock position in the loop.
+        const tKeep = htmlBgm && !isNaN(htmlBgm.currentTime) ? htmlBgm.currentTime : 0;
+        switchHtmlTrack(url, tKeep);
         return;
       }
+
+      // No file — procedural pad; do not restart if already running.
+      if (bgmNodes) {
+        applyBgmLevels(duck);
+        return;
+      }
+      // Pause HTML without wiping position so returning to a file bed can resume.
+      stopHtmlBgm(false);
       if (unlocked) startProceduralPad(duck);
       else {
         const wait = function () {
           if (!unlocked || bgmMode !== next) return;
-          startProceduralPad(duck);
+          if (!bgmNodes) startProceduralPad(duck);
           document.removeEventListener('pointerdown', wait, true);
         };
         document.addEventListener('pointerdown', wait, true);
@@ -528,7 +576,7 @@
 
   function bgmStop() {
     stopProceduralBgm();
-    stopHtmlBgm();
+    stopHtmlBgm(true);
     bgmMode = null;
   }
 
