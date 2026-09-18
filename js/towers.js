@@ -64,9 +64,27 @@
       kind: 'bass',
       defaultTarget: 'strongest',
     },
+    /** Choir Andy — unlocked after clearing Closing Night. Expensive support sniper. */
+    andy: {
+      id: 'andy',
+      name: 'Andy',
+      unlockId: 'andy',
+      cost: 190,
+      range: 250,
+      fireRate: 2.2,
+      damage: 25,
+      color: '#1a1a1e',
+      projectileSpeed: 420,
+      kind: 'andy',
+      defaultTarget: 'front',
+      cueRadius: 80,
+      cueStunDuration: 0.6,
+    },
   };
 
   const ORDER = ['soprano', 'alto', 'tenor', 'bass'];
+  const ORDER_ALL = [...ORDER, 'andy'];
+  const SHOP_ORDER = ORDER_ALL;
 
   // Crosspath rule (classic 2-path feel): each path max 3 tiers; after any upgrade
   // Math.min(rangeTier, damageTier) <= 2 — i.e. max deep/cross is 3/2 or 2/3.
@@ -78,16 +96,40 @@
     damage: [35, 75, 135],
   };
 
-  const UPGRADE_NAMES = {
-    range: ['Longer Breath', 'Open Hall', 'Far Gallery'],
-    damage: ['Sharper Attack', 'Full Voice', 'Fortissimo'],
+  // Locked per-singer upgrade names: left = range, right = damage.
+  const UPGRADE_NAMES_BY_VOICE = {
+    soprano: {
+      range: ['Breath Control', 'Passing Tone', 'Melody'],
+      damage: ['Echo', 'Cascade', 'Vibrato'],
+    },
+    alto: {
+      range: ['Breath Support', 'Blend', 'Harmony'],
+      damage: ['Articulate', 'Pierce', 'Morale Boost'],
+    },
+    tenor: {
+      range: ['Tall Vowels', 'Open Vowels', 'Project'],
+      damage: ['Clear Cut', 'Countermelody', 'Crescendo'],
+    },
+    bass: {
+      range: ['On Beat', 'Precise Rhythm', 'Steady Tempo'],
+      damage: ['Downbeat', 'Drone', 'Fermata'],
+    },
+    andy: {
+      range: ['Cue Reach', 'Wider Cue', 'Full House'],
+      damage: ['Baton Tap', 'Downbeat', 'Curtain Call'],
+    },
   };
 
-  // Bass has infinite range — Range path buys attack speed (+ pierce at T3).
-  const BASS_RANGE_NAMES = ['Quicker Cue', 'Steady Tempo', 'Echo Pierce'];
+  // Alias used by design notes / dictionary stubs.
+  const VOICE_UPGRADE_NAMES = UPGRADE_NAMES_BY_VOICE;
 
-  // Soprano Damage path unlocks and deepens chain (base attack is single-target).
-  const SOPRANO_DAMAGE_NAMES = ['First Echo', 'Harmony Chain', 'Cascade'];
+  const PATH_LABELS = {
+    soprano: { range: 'Breath', damage: 'Tone' },
+    alto: { range: 'Support', damage: 'Edge' },
+    tenor: { range: 'Vowels', damage: 'Line' },
+    bass: { range: 'Tempo', damage: 'Weight' },
+    andy: { range: 'Cue', damage: 'Baton' },
+  };
 
   function cellKey(c, r) {
     return c + ',' + r;
@@ -122,6 +164,7 @@
       upgRange: 0,
       upgDamage: 0,
       upgradeSpent: 0,
+      crescendoStreak: 0,
     };
   }
 
@@ -142,58 +185,99 @@
       chainJumps: def.chainJumps || 0,
       chainRange: def.chainRange || 0,
       chainDamageScale: def.chainDamageScale || 0.7,
+      chainPreferDifferent: false,
       auraRange: def.auraRange || 0,
       auraDamageBonus: def.auraDamageBonus || 0,
+      auraFireRateBonus: 0,
+      jazzCapBonus: 0,
+      folkAssist: 0,
+      goldPerKill: def.id === 'alto' ? 1 : 0,
       projectileSpeed: def.projectileSpeed || 320,
+      hitSlowDuration: 0,
+      hitSlowMult: 1,
+      splashSlowDuration: 0,
+      splashSlowMult: 1,
+      clusterMin: 0,
+      clusterMult: 1,
+      crescendo: false,
+      heavyBonusMult: 1,
+      cueRadius: def.cueRadius || 0,
+      cueStunDuration: def.cueStunDuration || 0,
     };
 
     const type = def.id;
 
-    // --- Range path ---
+    // --- Range path (left) ---
     if (type === 'bass') {
-      // Infinite range: faster singing + pierce at T3
-      if (ur >= 1) s.fireRate *= 0.88;
-      if (ur >= 2) s.fireRate *= 0.85;
+      // Tempo path: aggressive fire-rate; pierce only at Steady Tempo (T3).
+      if (ur >= 1) s.fireRate *= 0.8;
+      if (ur >= 2) s.fireRate *= 0.75;
       if (ur >= 3) {
-        s.fireRate *= 0.82;
+        s.fireRate *= 0.7;
         s.chainJumps = Math.max(s.chainJumps, 1);
         s.chainRange = Math.max(s.chainRange, 90);
         s.chainDamageScale = Math.min(s.chainDamageScale, 0.55);
       }
-    } else {
-      if (type === 'soprano') {
-        if (ur >= 1) s.range += 25;
-        if (ur >= 2) s.range += 30;
-        if (ur >= 3) s.range += 40;
-        // Chain reach only matters after Damage path unlocks chaining.
-        if (ud >= 1) {
-          if (ur >= 1) s.chainRange += 10;
-          if (ur >= 2) s.chainRange += 20;
-          if (ur >= 3) s.chainRange += 25;
-        }
-      } else if (type === 'alto') {
-        if (ur >= 1) {
-          s.range += 20;
-          s.auraRange += 25;
-        }
-        if (ur >= 2) {
-          s.range += 25;
-          s.auraRange += 30;
-        }
-        if (ur >= 3) {
-          s.range += 30;
-          s.auraRange += 35;
-        }
-      } else if (type === 'tenor') {
-        if (ur >= 1) s.range += 22;
-        if (ur >= 2) s.range += 28;
-        if (ur >= 3) s.range += 35;
+    } else if (type === 'soprano') {
+      if (ur >= 1) s.range += 25;
+      if (ur >= 2) s.range += 30;
+      if (ur >= 3) {
+        s.range += 40;
+        s.chainPreferDifferent = true; // Melody
+      }
+      // Chain reach only matters after Damage path unlocks chaining.
+      if (ud >= 1) {
+        if (ur >= 1) s.chainRange += 10;
+        if (ur >= 2) s.chainRange += 20;
+        if (ur >= 3) s.chainRange += 25;
+      }
+    } else if (type === 'alto') {
+      if (ur >= 1) {
+        s.range += 20;
+        s.auraRange += 25;
+      }
+      if (ur >= 2) {
+        s.range += 25;
+        s.auraRange += 30;
+        s.auraFireRateBonus = 0.1; // Blend
+      }
+      if (ur >= 3) {
+        s.range += 30;
+        s.auraRange += 35;
+        s.jazzCapBonus = 3; // Harmony
+        s.folkAssist = 6;
+      }
+    } else if (type === 'tenor') {
+      if (ur >= 1) s.range += 22;
+      if (ur >= 2) {
+        s.range += 28;
+        s.splash += 8; // Open Vowels
+      }
+      if (ur >= 3) {
+        s.range += 35;
+        s.splash += 10; // Project
+        s.splashSlowDuration = 1.2;
+        s.splashSlowMult = 0.65;
+      }
+    } else if (type === 'andy') {
+      // Cue path: reach + cue pulse radius
+      if (ur >= 1) {
+        s.range += 20;
+        s.cueRadius += 8;
+      }
+      if (ur >= 2) {
+        s.range += 25;
+        s.cueRadius += 10;
+      }
+      if (ur >= 3) {
+        s.range += 30;
+        s.cueRadius += 14; // Full House
       }
     }
 
-    // --- Damage path ---
+    // --- Damage path (right) ---
     if (type === 'soprano') {
-      // T1 unlocks chain (1 jump); deeper tiers add jumps + scale.
+      // Echo / Cascade / Vibrato — unlock and deepen chain.
       if (ud >= 1) {
         s.damage += 4;
         s.chainJumps = Math.max(s.chainJumps, 1);
@@ -215,33 +299,54 @@
     } else if (type === 'alto') {
       if (ud >= 1) {
         s.damage += 3;
-        s.auraDamageBonus += 0.05;
+        s.goldPerKill = 2; // Articulate
       }
       if (ud >= 2) {
         s.damage += 4;
-        s.auraDamageBonus += 0.07;
+        s.auraDamageBonus += 0.12; // Pierce
       }
       if (ud >= 3) {
-        s.damage += 7;
-        s.auraDamageBonus += 0.1;
+        s.damage += 8;
+        s.auraDamageBonus += 0.18; // Morale Boost (no gold tick)
       }
     } else if (type === 'tenor') {
       if (ud >= 1) {
         s.damage += 5;
-        s.splash += 8;
+        s.splash += 8; // Clear Cut
       }
       if (ud >= 2) {
         s.damage += 7;
         s.splash += 10;
+        s.clusterMin = 3; // Countermelody
+        s.clusterMult = 1.25;
       }
       if (ud >= 3) {
         s.damage += 12;
         s.splash += 14;
+        s.crescendo = true; // Crescendo
       }
     } else if (type === 'bass') {
-      if (ud >= 1) s.damage += 12;
-      if (ud >= 2) s.damage += 16;
-      if (ud >= 3) s.damage += 27;
+      if (ud >= 1) s.damage += 12; // Downbeat
+      if (ud >= 2) {
+        s.damage += 16;
+        s.hitSlowDuration = 0.9; // Drone
+        s.hitSlowMult = 0.7;
+      }
+      if (ud >= 3) {
+        s.damage += 27;
+        s.hitSlowDuration = 1.5; // Fermata
+        s.hitSlowMult = 0.55;
+        s.heavyBonusMult = 1.35;
+      }
+    } else if (type === 'andy') {
+      // Baton path: light damage bumps; T3 extends cue stun
+      if (ud >= 1) s.damage += 3; // Baton Tap
+      if (ud >= 2) s.damage += 4; // Downbeat
+      if (ud >= 3) {
+        s.damage += 6; // Curtain Call
+        s.cueStunDuration += 0.12;
+        s.cueRadius += 8;
+      }
     }
 
     return s;
@@ -339,6 +444,38 @@
     return mult;
   }
 
+  /** Fire-rate speed mult from nearby Alto Blend auras (higher = faster). */
+  function fireRateMultiplier(tower, towers) {
+    let mult = 1;
+    for (const other of towers) {
+      if (other === tower) continue;
+      const os = combatStats(other);
+      if (!os.auraRange || !os.auraFireRateBonus) continue;
+      if (dist(tower, other) <= os.auraRange) {
+        mult += os.auraFireRateBonus;
+      }
+    }
+    return mult;
+  }
+
+  /** Sum Harmony jazzCapBonus / folkAssist from Altos whose aura covers fromTower. */
+  function harmonyAssists(fromTower, towers) {
+    let jazzCapBonus = 0;
+    let folkAssist = 0;
+    if (!fromTower || !towers) return { jazzCapBonus, folkAssist };
+    for (const other of towers) {
+      if (!other || other.type !== 'alto') continue;
+      const os = combatStats(other);
+      if (!os.auraRange) continue;
+      if (!(os.jazzCapBonus || os.folkAssist)) continue;
+      if (dist(fromTower, other) <= os.auraRange) {
+        jazzCapBonus += os.jazzCapBonus || 0;
+        folkAssist += os.folkAssist || 0;
+      }
+    }
+    return { jazzCapBonus, folkAssist };
+  }
+
   function tryFire(tower, enemies, towers, projectiles, waypoints) {
     if (tower.cooldown > 0) return;
     const target = pickTarget(tower, enemies, waypoints);
@@ -346,7 +483,16 @@
 
     const stats = combatStats(tower);
     const mult = damageMultiplier(tower, towers);
-    const dmg = stats.damage * mult;
+    const rateMult = fireRateMultiplier(tower, towers);
+    let dmg = stats.damage * mult;
+    let splash = stats.splash || 0;
+
+    // Crescendo: after 3 splash hits, next shot is amplified then streak resets.
+    if (stats.crescendo && (tower.crescendoStreak || 0) >= 3) {
+      splash *= 1.55;
+      dmg *= 1.25;
+      tower.crescendoStreak = 0;
+    }
 
     projectiles.push(
       PNProjectiles.createProjectile({
@@ -358,15 +504,26 @@
         speed: stats.projectileSpeed,
         damage: dmg,
         color: tower.color,
-        splash: stats.splash || 0,
+        splash: splash,
         chainLeft: stats.chainJumps || 0,
         chainRange: stats.chainRange || 0,
         chainDamageScale: stats.chainDamageScale || 0.7,
+        chainPreferDifferent: !!stats.chainPreferDifferent,
         fromTower: tower,
         kind: tower.kind,
+        hitSlowDuration: stats.hitSlowDuration || 0,
+        hitSlowMult: stats.hitSlowMult || 1,
+        splashSlowDuration: stats.splashSlowDuration || 0,
+        splashSlowMult: stats.splashSlowMult || 1,
+        clusterMin: stats.clusterMin || 0,
+        clusterMult: stats.clusterMult || 1,
+        heavyBonusMult: stats.heavyBonusMult || 1,
+        crescendo: !!stats.crescendo,
+        cueRadius: stats.cueRadius || 0,
+        cueStunDuration: stats.cueStunDuration || 0,
       })
     );
-    tower.cooldown = stats.fireRate;
+    tower.cooldown = stats.fireRate / (rateMult || 1);
   }
 
   function updateTower(tower, dt, enemies, towers, projectiles, waypoints) {
@@ -506,15 +663,20 @@
     return costs[tier];
   }
 
+  function pathLabel(tower, path) {
+    const type = tower && (tower.type || tower.kind);
+    const labels = PATH_LABELS[type];
+    if (labels && labels[path]) return labels[path];
+    return path === 'range' ? 'Range' : 'Damage';
+  }
+
   function upgradeName(tower, path, tierIndex) {
-    if (path === 'range' && tower && tower.type === 'bass') {
-      return BASS_RANGE_NAMES[tierIndex] || UPGRADE_NAMES.range[tierIndex];
+    const type = tower && (tower.type || tower.kind);
+    const byVoice = type && UPGRADE_NAMES_BY_VOICE[type];
+    if (byVoice && byVoice[path] && byVoice[path][tierIndex]) {
+      return byVoice[path][tierIndex];
     }
-    if (path === 'damage' && tower && tower.type === 'soprano') {
-      return SOPRANO_DAMAGE_NAMES[tierIndex] || UPGRADE_NAMES.damage[tierIndex];
-    }
-    const names = UPGRADE_NAMES[path];
-    return names ? names[tierIndex] : 'Upgrade';
+    return 'Upgrade';
   }
 
   function crosspathOk(nextRange, nextDamage) {
@@ -577,10 +739,15 @@
   global.PNTowers = {
     DEFS,
     ORDER,
+    ORDER_ALL,
+    SHOP_ORDER,
     TARGET_MODES,
     UPGRADE_COSTS,
     UPGRADE_MAX,
     UPGRADE_CROSS_CAP,
+    UPGRADE_NAMES_BY_VOICE,
+    VOICE_UPGRADE_NAMES,
+    PATH_LABELS,
     createTower,
     combatStats,
     updateTower,
@@ -596,5 +763,9 @@
     upgradeInfo,
     nextUpgradeCost,
     upgradeName,
+    pathLabel,
+    fireRateMultiplier,
+    damageMultiplier,
+    harmonyAssists,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

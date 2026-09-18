@@ -39,7 +39,14 @@
       const id = cv.getAttribute('data-icon');
       const ctx = cv.getContext('2d');
       ctx.clearRect(0, 0, cv.width, cv.height);
-      PNSprites.drawPart(ctx, id, cv.width / 2, cv.height / 2 + 4, false, 0.85);
+      if (id === 'andy' && PNSprites.drawAndyClark) {
+        PNSprites.drawAndyClark(ctx, cv.width / 2, cv.height / 2 + 2, {
+          scale: 0.7,
+          flash: false,
+        });
+      } else {
+        PNSprites.drawPart(ctx, id, cv.width / 2, cv.height / 2 + 4, false, 0.85);
+      }
     });
     iconsPainted = true;
   }
@@ -103,14 +110,21 @@
     document.querySelectorAll('[data-tower]').forEach((btn) => {
       const id = btn.getAttribute('data-tower');
       const def = PNTowers.DEFS[id];
+      const unlocked =
+        !def || !def.unlockId ||
+        (PNLevels.isTowerUnlocked ? PNLevels.isTowerUnlocked(id) : true);
+      if (id === 'andy' || def && def.unlockId) {
+        btn.hidden = !unlocked;
+        btn.classList.toggle('shop-locked', !unlocked);
+      }
       btn.classList.toggle('active', state.selectedType === id);
-      btn.disabled = !def;
+      btn.disabled = !def || !unlocked;
       const cost = btn.querySelector('[data-cost]');
       if (cost && def) {
         cost.setAttribute('data-cost', String(def.cost));
         cost.textContent = def.cost + 'g';
       }
-      if (def && state.gold < def.cost) btn.classList.add('cant-afford');
+      if (def && unlocked && state.gold < def.cost) btn.classList.add('cant-afford');
       else btn.classList.remove('cant-afford');
     });
 
@@ -140,6 +154,11 @@
     if (upPanel) {
       const t = state.selectedTower;
       upPanel.hidden = !t;
+      document.querySelectorAll('[data-upgrade-path-label]').forEach((el) => {
+        const path = el.getAttribute('data-upgrade-path-label');
+        if (t && PNTowers.pathLabel) el.textContent = PNTowers.pathLabel(t, path);
+        else el.textContent = path === 'range' ? 'Range' : 'Damage';
+      });
       syncUpgradePath(state, 'range');
       syncUpgradePath(state, 'damage');
     }
@@ -336,37 +355,72 @@
     soprano: {
       role: 'Solo lead',
       ability:
-        'Single-target lead. Chain unlocks on the Damage path: First Echo → Harmony Chain → Cascade.',
+        'Single-target lead. Tone path unlocks chain: Echo → Cascade → Vibrato. Melody prefers a different note type when chaining.',
       paths:
-        'Range: longer breath / hall reach. Damage: unlocks and deepens chain echoes.',
+        'Breath: Breath Control → Passing Tone → Melody. Tone: Echo → Cascade → Vibrato.',
     },
     alto: {
       role: 'Chip · buff aura',
       ability:
-        'Soft chip damage plus a nearby damage aura. Each Alto on the board adds +1 gold per kill.',
+        'Soft chip plus a nearby aura. Articulate raises gold-per-kill; Harmony assists Jazz/Folk allies in aura.',
       paths:
-        'Range: attack reach and aura size. Damage: stronger chip and aura bonus.',
+        'Support: Breath Support → Blend → Harmony. Edge: Articulate → Pierce → Morale Boost.',
     },
     tenor: {
       role: 'Splash AoE',
-      ability: 'Hits the target and splash-damages nearby notes — crowd control for packs.',
-      paths: 'Range: farther cue. Damage: harder splash hits.',
+      ability:
+        'Splash crowd control. Project slows splash hits; Countermelody rewards clusters; Crescendo builds a powered shot.',
+      paths:
+        'Vowels: Tall Vowels → Open Vowels → Project. Line: Clear Cut → Countermelody → Crescendo.',
     },
     bass: {
       role: 'Sniper · infinite range',
-      ability: 'Always in range. Heavy single shots for tough notes and bosses.',
+      ability:
+        'Always in range. Tempo path accelerates fire (pierce at Steady Tempo). Fermata slows and punishes heavy notes.',
       paths:
-        'Range path is speed / pierce (Quicker Cue → Steady Tempo → Echo Pierce). Damage: bigger hits.',
+        'Tempo: On Beat → Precise Rhythm → Steady Tempo. Weight: Downbeat → Drone → Fermata.',
+    },
+    andy: {
+      role: 'Cue · support sniper',
+      ability:
+        'Expensive long-range support. Modest single-target damage; each hit pulses a cue that stuns nearby notes. Weak vs packs on purpose.',
+      paths:
+        'Cue: Cue Reach → Wider Cue → Full House. Baton: Baton Tap → Downbeat → Curtain Call.',
     },
   };
 
   function singerCardsHtml() {
-    const order = (PNTowers && PNTowers.ORDER) || ['soprano', 'alto', 'tenor', 'bass'];
+    const order =
+      (PNTowers && (PNTowers.SHOP_ORDER || PNTowers.ORDER_ALL || PNTowers.ORDER)) ||
+      ['soprano', 'alto', 'tenor', 'bass'];
     return order
       .map((id) => {
         const def = PNTowers.DEFS[id];
         if (!def) return '';
+        const unlocked =
+          !def.unlockId ||
+          (PNLevels.isTowerUnlocked ? PNLevels.isTowerUnlocked(id) : false);
         const blurb = SINGER_BLURBS[id] || { role: '', ability: '', paths: '' };
+        if (!unlocked) {
+          return (
+            '<article class="dict-card dict-locked" data-dict-singer="' +
+            id +
+            '">' +
+            '<div class="dict-card-top">' +
+            '<canvas class="dict-icon" data-dict-part="' +
+            id +
+            '" width="64" height="64" aria-hidden="true"></canvas>' +
+            '<div>' +
+            '<h3>' +
+            def.name +
+            '</h3>' +
+            '<p class="dict-role">Locked</p>' +
+            '<p class="dict-cost">Unlock: clear Closing Night</p>' +
+            '</div></div>' +
+            '<p class="dict-body">Choir Andy — cue-stun support sniper. Clear Closing Night to hire him from the shop.</p>' +
+            '</article>'
+          );
+        }
         return (
           '<article class="dict-card" data-dict-singer="' +
           id +
@@ -477,11 +531,9 @@
         '<p class="dict-role">Boss · Closing Night</p>' +
         '<p class="dict-cost">HP ' +
         andy.hp +
-        ' · ' +
-        andy.gold +
-        'g</p>' +
+        ' · leaks 5 lives</p>' +
         '</div></div>' +
-        '<p class="dict-body">Conductor boss. His cue periodically <strong>stuns the choir</strong>. If he reaches the end he leaks lives like any note — stop him before the house empties.</p>' +
+        '<p class="dict-body">Conductor boss. His cue periodically <strong>stuns the choir</strong>. If he reaches the end he leaks <strong>5 lives</strong> — stop him before the house empties.</p>' +
         '</article>';
     }
     return html;
@@ -493,7 +545,14 @@
       const id = cv.getAttribute('data-dict-part');
       const ctx = cv.getContext('2d');
       ctx.clearRect(0, 0, cv.width, cv.height);
-      PNSprites.drawPart(ctx, id, cv.width / 2, cv.height / 2 + 4, false, 0.9);
+      if (id === 'andy' && PNSprites.drawAndyClark) {
+        PNSprites.drawAndyClark(ctx, cv.width / 2, cv.height / 2 + 2, {
+          scale: 0.7,
+          flash: false,
+        });
+      } else {
+        PNSprites.drawPart(ctx, id, cv.width / 2, cv.height / 2 + 4, false, 0.9);
+      }
     });
     document.querySelectorAll('canvas[data-dict-note]').forEach((cv) => {
       const id = cv.getAttribute('data-dict-note');

@@ -41,6 +41,23 @@
     } catch (_) {}
   }
 
+  function isPlayHelpOpen() {
+    const ov = document.getElementById('play-help-overlay');
+    return !!(ov && !ov.hidden);
+  }
+
+  function openPlayHelp() {
+    const ov = document.getElementById('play-help-overlay');
+    if (!ov) return;
+    ov.hidden = false;
+  }
+
+  function closePlayHelp() {
+    const ov = document.getElementById('play-help-overlay');
+    if (!ov) return;
+    ov.hidden = true;
+  }
+
   function hideOnboarding() {
     const ov = document.getElementById('onboard-overlay');
     if (ov) {
@@ -116,6 +133,7 @@
   }
 
   function goTitle() {
+    closePlayHelp();
     state.screen = 'title';
     state.paused = true;
     hideOnboarding();
@@ -124,6 +142,7 @@
   }
 
   function goAdventure() {
+    closePlayHelp();
     state.screen = 'adventure';
     state.paused = true;
     hideOnboarding();
@@ -178,6 +197,15 @@
     state.screen = 'congrats';
     state.paused = true;
     hideEnd();
+    // Closing Night victory unlocks Choir Andy for the shop.
+    if (PNLevels.unlockTower) PNLevels.unlockTower('andy');
+    const body = document.querySelector('.congrats-body');
+    if (body) {
+      body.textContent =
+        'You walked the choir from the lawn to Closing Night and held the stage ' +
+        'against jazz, folk, and conductor Andy Clark. Andy joins the choir — ' +
+        'hire him from the shop on your next run. The house is on its feet.';
+    }
     PNUI.showScreen('congrats');
     const a = audio();
     if (a) {
@@ -244,20 +272,30 @@
     state.enemies.push(PNEnemies.createEnemy(typeId, map.waypoints, style));
   }
 
-  /** +1 gold per living Alto on the map when a note dies. */
+  /** Gold bonus from living Altos (Articulate raises goldPerKill). */
   function altoGoldBonus() {
     let n = 0;
     for (const t of state.towers) {
-      if (t && t.type === 'alto') n += 1;
+      if (!t || t.type !== 'alto') continue;
+      const s = PNTowers.combatStats ? PNTowers.combatStats(t) : null;
+      n += s && s.goldPerKill != null ? s.goldPerKill : 1;
     }
-    return n * 1;
+    return n;
   }
 
   function applyDamage(enemy, amount, meta) {
     if (!enemy || !enemy.alive) return false;
     const raw = amount;
+    let assist = { jazzCapBonus: 0, folkAssist: 0 };
+    if (meta && meta.fromTower && PNTowers.harmonyAssists) {
+      assist = PNTowers.harmonyAssists(meta.fromTower, state.towers);
+    }
+    const filterOpts = {
+      jazzCapBonus: assist.jazzCapBonus || 0,
+      folkAssist: assist.folkAssist || 0,
+    };
     const filtered = PNEnemies.filterDamage
-      ? PNEnemies.filterDamage(enemy, amount)
+      ? PNEnemies.filterDamage(enemy, amount, filterOpts)
       : amount;
     const part = (meta && (meta.kind || (meta.fromTower && meta.fromTower.kind))) || null;
     const a = audio();
@@ -265,8 +303,9 @@
     const fxY = enemy.y - 12;
 
     // Jazz cap / folk block feedback
+    const jazzCap = (PNEnemies.JAZZ_CAP || 10) + (filterOpts.jazzCapBonus || 0);
     let specialSfx = false;
-    if (!enemy.isBoss && enemy.style === 'jazz' && raw > (PNEnemies.JAZZ_CAP || 10)) {
+    if (!enemy.isBoss && enemy.style === 'jazz' && raw > jazzCap) {
       spawnFloat(fxX, fxY - 8, 'CAP', '#e8c547', 0.75);
       if (a) a.jazzCapped();
       specialSfx = true;
@@ -289,39 +328,95 @@
       enemy.alive = false;
       state.gold += (enemy.gold || 0) + altoGoldBonus();
       if (a) a.kill();
-      return true;
     }
-    return false;
+    return true; // damage applied
   }
 
-  function nearestOther(fromEnemy, excludeSet, range) {
+  function nearestOther(fromEnemy, excludeSet, range, preferDifferent) {
     let best = null;
     let bestD = range + 1;
+    let bestDiff = null;
+    let bestDiffD = range + 1;
     for (const e of livingEnemies()) {
       if (excludeSet.has(e)) continue;
       const d = Math.hypot(e.x - fromEnemy.x, e.y - fromEnemy.y);
-      if (d <= range && d < bestD) {
+      if (d > range) continue;
+      if (d < bestD) {
         bestD = d;
         best = e;
       }
+      if (preferDifferent && e.type !== fromEnemy.type && d < bestDiffD) {
+        bestDiffD = d;
+        bestDiff = e;
+      }
     }
+    if (preferDifferent && bestDiff) return bestDiff;
     return best;
+  }
+
+  function isHeavyTarget(enemy) {
+    return !!(enemy && (enemy.isBoss || enemy.type === 'andy' || enemy.type === 'whole'));
+  }
+
+  function hitDamageFor(p, enemy) {
+    let dmg = p.damage;
+    if ((p.heavyBonusMult || 1) > 1 && isHeavyTarget(enemy)) {
+      dmg *= p.heavyBonusMult;
+    }
+    return dmg;
   }
 
   function onProjectileHit(p) {
     const hit = p.target && p.target.alive ? p.target : null;
     const splashR = p.splash || 0;
-
     const meta = { kind: p.kind, fromTower: p.fromTower };
+    let damagedCount = 0;
+
     if (splashR > 0) {
       effects.push({ x: p.x, y: p.y, r: splashR, life: 0.25, color: p.color });
+      const inSplash = [];
       for (const e of livingEnemies()) {
-        if (Math.hypot(e.x - p.x, e.y - p.y) <= splashR) {
-          applyDamage(e, p.damage, meta);
+        if (Math.hypot(e.x - p.x, e.y - p.y) <= splashR) inSplash.push(e);
+      }
+      let splashDmgMult = 1;
+      if (p.clusterMin > 0 && inSplash.length >= p.clusterMin) {
+        splashDmgMult = p.clusterMult || 1.25;
+      }
+      for (const e of inSplash) {
+        if (applyDamage(e, hitDamageFor(p, e) * splashDmgMult, meta)) damagedCount += 1;
+        if (p.splashSlowDuration > 0 && PNEnemies.applySlow) {
+          PNEnemies.applySlow(e, p.splashSlowDuration, p.splashSlowMult || 0.65);
         }
       }
     } else if (hit) {
-      applyDamage(hit, p.damage, meta);
+      if (applyDamage(hit, hitDamageFor(p, hit), meta)) damagedCount += 1;
+      if (p.hitSlowDuration > 0 && PNEnemies.applySlow) {
+        PNEnemies.applySlow(hit, p.hitSlowDuration, p.hitSlowMult || 0.7);
+      }
+    }
+
+    // Choir Andy cue pulse: stun notes near impact (not towers).
+    if ((p.kind === 'andy' || (p.fromTower && p.fromTower.kind === 'andy')) &&
+        (p.cueRadius > 0) && PNEnemies.applyStun) {
+      const cueR = p.cueRadius || 80;
+      const cueD = p.cueStunDuration || 0.6;
+      const ix = hit ? hit.x : p.x;
+      const iy = hit ? hit.y : p.y;
+      effects.push({ x: ix, y: iy, r: cueR, life: 0.28, color: 'rgba(232,197,71,0.55)' });
+      for (const e of livingEnemies()) {
+        if (Math.hypot(e.x - ix, e.y - iy) <= cueR) {
+          PNEnemies.applyStun(e, cueD);
+        }
+      }
+    }
+
+    // Crescendo: splash that damages ≥1 builds streak; empty splash / no target resets.
+    if (p.crescendo && p.fromTower) {
+      if (splashR > 0 && damagedCount >= 1) {
+        p.fromTower.crescendoStreak = (p.fromTower.crescendoStreak || 0) + 1;
+      } else {
+        p.fromTower.crescendoStreak = 0;
+      }
     }
 
     if (p.chainLeft > 0 && hit) {
@@ -329,8 +424,9 @@
       let cursor = hit;
       let dmg = p.damage * (p.chainDamageScale || 0.7);
       let left = p.chainLeft;
+      const preferDiff = !!p.chainPreferDifferent;
       while (left > 0) {
-        const next = nearestOther(cursor, seen, p.chainRange || 100);
+        const next = nearestOther(cursor, seen, p.chainRange || 100, preferDiff);
         if (!next) break;
         seen.add(next);
         state.projectiles.push(
@@ -344,6 +440,7 @@
             damage: dmg,
             color: p.color,
             chainLeft: 0,
+            chainPreferDifferent: preferDiff,
             fromTower: p.fromTower,
             kind: 'soprano',
           })
@@ -360,6 +457,7 @@
     const type = state.selectedType;
     const def = PNTowers.DEFS[type];
     if (!def) return;
+    if (PNLevels.isTowerUnlocked && !PNLevels.isTowerUnlocked(type)) return;
     if (!map.canBuild(c, r)) return;
     const key = PNTowers.cellKey(c, r);
     if (state.occupied[key]) return;
@@ -515,6 +613,20 @@
       if (a) a.uiClick();
       goAdventure();
     });
+    document.getElementById('btn-play-help')?.addEventListener('click', () => {
+      const a = audio();
+      if (a) a.uiClick();
+      openPlayHelp();
+    });
+    document.getElementById('btn-play-help-close')?.addEventListener('click', () => {
+      const a = audio();
+      if (a) a.uiClick();
+      closePlayHelp();
+    });
+    document.getElementById('play-help-overlay')?.addEventListener('click', (ev) => {
+      if (ev.target && ev.target.id === 'play-help-overlay') closePlayHelp();
+    });
+
     document.getElementById('btn-to-adventure')?.addEventListener('click', goAdventure);
     document.getElementById('btn-congrats-adventure')?.addEventListener('click', goAdventure);
     document.getElementById('btn-congrats-title')?.addEventListener('click', goTitle);
@@ -563,6 +675,7 @@
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-tower');
         if (!PNTowers.DEFS[id]) return;
+        if (PNLevels.isTowerUnlocked && !PNLevels.isTowerUnlocked(id)) return;
         const a = audio();
         if (a) a.uiClick();
         state.selectedType = state.selectedType === id ? null : id;
@@ -606,16 +719,25 @@
     document.addEventListener('keydown', (ev) => {
       if (state.screen !== 'play') return;
       if (ev.key === 'Escape') {
+        if (isPlayHelpOpen()) {
+          closePlayHelp();
+          return;
+        }
         togglePause();
       }
-      const hotkeys = { '1': 'soprano', '2': 'alto', '3': 'tenor', '4': 'bass' };
+      const hotkeys = { '1': 'soprano', '2': 'alto', '3': 'tenor', '4': 'bass', '5': 'andy' };
       if (hotkeys[ev.key]) {
         const id = hotkeys[ev.key];
-        state.selectedType = state.selectedType === id ? null : id;
-        if (state.selectedType) state.selectedTower = null;
+        if (PNLevels.isTowerUnlocked && !PNLevels.isTowerUnlocked(id)) {
+          /* locked */
+        } else {
+          state.selectedType = state.selectedType === id ? null : id;
+          if (state.selectedType) state.selectedTower = null;
+        }
       }
       if (ev.key === ' ') {
         ev.preventDefault();
+        if (isPlayHelpOpen()) return;
         const started = startWaveIfReady();
         if (!started && state.status === 'playing') toggleSpeed();
       }

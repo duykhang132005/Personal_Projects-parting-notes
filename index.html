@@ -81,7 +81,8 @@
         <h1 class="congrats-title">Congratulations!</h1>
         <p class="congrats-body">
           You walked the choir from the lawn to Closing Night and held the stage
-          against jazz, folk, and conductor Andy Clark. The house is on its feet.
+          against jazz, folk, and conductor Andy Clark. Andy joins the choir —
+          hire him from the shop on your next run. The house is on its feet.
         </p>
         <p class="congrats-sub">Parting Notes — adventure complete.</p>
         <div class="congrats-actions">
@@ -160,18 +161,18 @@
           <span class="upgrade-heading">Upgrades</span>
           <div class="upgrade-cols" role="group" aria-label="Tower upgrades">
             <div class="upgrade-col">
-              <span class="upgrade-path-label">Range</span>
+              <span class="upgrade-path-label" data-upgrade-path-label="range">Breath</span>
               <span class="upgrade-pips" data-upgrade-pips="range" aria-hidden="true">○○○</span>
               <button type="button" class="ctrl-btn upgrade-btn" data-upgrade="range">
-                <span class="upgrade-name" data-upgrade-name="range">Longer Breath</span>
+                <span class="upgrade-name" data-upgrade-name="range">Breath Control</span>
                 <span class="upgrade-cost" data-upgrade-cost="range">30g</span>
               </button>
             </div>
             <div class="upgrade-col">
-              <span class="upgrade-path-label">Damage</span>
+              <span class="upgrade-path-label" data-upgrade-path-label="damage">Tone</span>
               <span class="upgrade-pips" data-upgrade-pips="damage" aria-hidden="true">○○○</span>
               <button type="button" class="ctrl-btn upgrade-btn" data-upgrade="damage">
-                <span class="upgrade-name" data-upgrade-name="damage">Sharper Attack</span>
+                <span class="upgrade-name" data-upgrade-name="damage">Echo</span>
                 <span class="upgrade-cost" data-upgrade-cost="damage">35g</span>
               </button>
             </div>
@@ -203,15 +204,63 @@
             <span class="shop-role">Sniper</span>
             <span class="shop-cost" data-cost="100">100g</span>
           </button>
+          <button type="button" class="shop-btn shop-locked" data-tower="andy" title="Cue support sniper (5)" hidden>
+            <canvas class="shop-icon" data-icon="andy" width="64" height="64" aria-hidden="true"></canvas>
+            <span class="shop-name">Andy</span>
+            <span class="shop-role">Cue</span>
+            <span class="shop-cost" data-cost="190">190g</span>
+          </button>
         </div>
 
-        <p class="hint" id="hint">
-          Pick a singer (click again to cancel), place on open ground, then <strong>Start wave</strong>.
-          Click a placed singer to set targeting / buy <strong>Range</strong> &amp; <strong>Damage</strong> upgrades (max 3/2) · <kbd>S</kbd> sell · <kbd>Space</kbd> start next wave / toggle speed · <kbd>Esc</kbd> pause.
-          <br />Jazz notes glitter and shrug heavy hits · Folk notes need big damage · each Alto adds +1g per kill.
-          Closing Night: watch for conductor <strong>Andy Clark</strong> — his cue stuns the choir.
-        </p>
+        <div class="play-footer">
+          <p class="hint hint-compact" id="hint">Place singers · Start wave · click a singer to upgrade</p>
+          <button type="button" class="ctrl-btn play-help-btn" id="btn-play-help" title="Controls and tips">Help</button>
+        </div>
       </main>
+
+      <!-- In-play help overlay -->
+      <div id="play-help-overlay" class="play-help-overlay" hidden>
+        <div class="play-help-card" role="dialog" aria-labelledby="play-help-title">
+          <header class="play-help-header">
+            <h2 id="play-help-title">How to play</h2>
+            <button type="button" class="ctrl-btn" id="btn-play-help-close" aria-label="Close help">Close</button>
+          </header>
+          <div class="play-help-grid">
+            <section>
+              <h3>Build</h3>
+              <ul>
+                <li>Pick a singer (hotkeys <kbd>1</kbd>–<kbd>5</kbd>), click again to cancel.</li>
+                <li>Place on open ground beside the path.</li>
+                <li>Press <strong>Start wave</strong> or <kbd>Space</kbd>.</li>
+              </ul>
+            </section>
+            <section>
+              <h3>Controls</h3>
+              <ul>
+                <li><kbd>Space</kbd> — start next wave; during a wave, toggle speed.</li>
+                <li><kbd>Esc</kbd> — pause / resume.</li>
+                <li><kbd>S</kbd> — sell selected singer (50% refund).</li>
+              </ul>
+            </section>
+            <section>
+              <h3>Upgrades</h3>
+              <ul>
+                <li>Click a placed singer for targeting and two upgrade paths.</li>
+                <li>Crosspath max is <strong>3/2</strong> (or 2/3).</li>
+              </ul>
+            </section>
+            <section>
+              <h3>Notes</h3>
+              <ul>
+                <li><strong>Jazz</strong> — glittery; heavy hits get capped.</li>
+                <li><strong>Folk</strong> — needs big damage or the hit does nothing.</li>
+                <li>Each Alto adds gold on kills.</li>
+                <li><strong>Closing Night</strong> — conductor Andy Clark cues and stuns the choir.</li>
+              </ul>
+            </section>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- First-run onboarding (Lawn Approach) -->

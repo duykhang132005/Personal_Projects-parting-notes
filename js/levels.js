@@ -267,17 +267,39 @@
 
   const PROGRESS_KEY = 'parting-notes-progress';
 
+  const BASE_TOWERS = ['soprano', 'alto', 'tenor', 'bass'];
+
+  function normalizeProgress(data) {
+    const cleared = Array.isArray(data && data.cleared) ? data.cleared.slice() : [];
+    let towersUnlocked = Array.isArray(data && data.towersUnlocked)
+      ? data.towersUnlocked.filter((id) => typeof id === 'string')
+      : [];
+    // Migrate: clearing Closing Night unlocks Choir Andy.
+    if (cleared.includes('closing') && !towersUnlocked.includes('andy')) {
+      towersUnlocked = towersUnlocked.concat(['andy']);
+    }
+    return {
+      unlocked: Math.max(1, Math.min(LEVELS.length, Number(data && data.unlocked) || 1)),
+      cleared,
+      towersUnlocked,
+    };
+  }
+
   function loadProgress() {
     try {
       const raw = localStorage.getItem(PROGRESS_KEY);
-      if (!raw) return { unlocked: 1, cleared: [] };
+      if (!raw) return { unlocked: 1, cleared: [], towersUnlocked: [] };
       const data = JSON.parse(raw);
-      return {
-        unlocked: Math.max(1, Math.min(LEVELS.length, Number(data.unlocked) || 1)),
-        cleared: Array.isArray(data.cleared) ? data.cleared : [],
-      };
+      const hadAndy =
+        Array.isArray(data.towersUnlocked) && data.towersUnlocked.includes('andy');
+      const p = normalizeProgress(data);
+      // Persist migration for saves that cleared Closing Night before unlock tracking.
+      if (!hadAndy && p.towersUnlocked.includes('andy')) {
+        saveProgress(p);
+      }
+      return p;
     } catch {
-      return { unlocked: 1, cleared: [] };
+      return { unlocked: 1, cleared: [], towersUnlocked: [] };
     }
   }
 
@@ -292,8 +314,29 @@
     if (level && level.index + 2 > p.unlocked) {
       p.unlocked = Math.min(LEVELS.length, level.index + 2);
     }
+    if (levelId === 'closing') unlockTower('andy', p);
     saveProgress(p);
     return p;
+  }
+
+  function unlockTower(id, progressOpt) {
+    const p = progressOpt || loadProgress();
+    if (!id) return p;
+    if (!Array.isArray(p.towersUnlocked)) p.towersUnlocked = [];
+    if (!p.towersUnlocked.includes(id)) p.towersUnlocked.push(id);
+    if (!progressOpt) saveProgress(p);
+    return p;
+  }
+
+  function isTowerUnlocked(id) {
+    if (!id) return false;
+    if (BASE_TOWERS.includes(id)) return true;
+    const p = loadProgress();
+    return Array.isArray(p.towersUnlocked) && p.towersUnlocked.includes(id);
+  }
+
+  function hasUnlockedAndy() {
+    return isTowerUnlocked('andy');
   }
 
   function getNextLevel(idOrIndex) {
@@ -307,10 +350,14 @@
     ROWS,
     TILE,
     LEVELS,
+    BASE_TOWERS,
     getLevel,
     getNextLevel,
     loadProgress,
     saveProgress,
     markCleared,
+    unlockTower,
+    isTowerUnlocked,
+    hasUnlockedAndy,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

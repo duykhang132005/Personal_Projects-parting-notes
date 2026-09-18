@@ -14,9 +14,20 @@
       chainLeft: opts.chainLeft || 0,
       chainRange: opts.chainRange || 0,
       chainDamageScale: opts.chainDamageScale || 0.7,
+      chainPreferDifferent: !!opts.chainPreferDifferent,
       fromTower: opts.fromTower || null,
       alive: true,
       kind: opts.kind || 'bolt',
+      hitSlowDuration: opts.hitSlowDuration || 0,
+      hitSlowMult: opts.hitSlowMult != null ? opts.hitSlowMult : 1,
+      splashSlowDuration: opts.splashSlowDuration || 0,
+      splashSlowMult: opts.splashSlowMult != null ? opts.splashSlowMult : 1,
+      clusterMin: opts.clusterMin || 0,
+      clusterMult: opts.clusterMult != null ? opts.clusterMult : 1,
+      heavyBonusMult: opts.heavyBonusMult != null ? opts.heavyBonusMult : 1,
+      crescendo: !!opts.crescendo,
+      cueRadius: opts.cueRadius || 0,
+      cueStunDuration: opts.cueStunDuration || 0,
     };
   }
 
@@ -49,7 +60,7 @@
   function drawProjectile(ctx, p) {
     if (!p.alive) return;
     ctx.fillStyle = p.color;
-    const s = p.kind === 'bass' ? 6 : 4;
+    const s = p.kind === 'bass' || p.kind === 'andy' ? 6 : 4;
     ctx.fillRect(Math.round(p.x - s / 2), Math.round(p.y - s / 2), s, s);
   }
 

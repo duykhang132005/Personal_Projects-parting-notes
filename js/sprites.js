@@ -269,9 +269,24 @@
   };
 
   function drawPart(ctx, typeId, cx, cy, selected, scaleOpt) {
+    const scale = scaleOpt || 1;
+    // Choir Andy shop/dict portrait — smaller than boss sprite.
+    if (typeId === 'andy') {
+      if (typeof drawAndyClark === 'function') {
+        drawAndyClark(ctx, cx, cy - 2, { scale: 0.72 * scale, flash: false });
+      }
+      if (selected) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(243,239,228,0.85)';
+        ctx.lineWidth = 2;
+        roundRect(ctx, cx - 22, cy - 36, 44, 72, 10);
+        ctx.stroke();
+        ctx.restore();
+      }
+      return;
+    }
     const fn = PART_DRAW[typeId];
     if (!fn) return;
-    const scale = scaleOpt || 1;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(scale, scale);
@@ -291,6 +306,7 @@
     alto: { main: '#222226', dark: '#101014', mark: '#c41e3a' },
     tenor: { main: '#1a1a1e', dark: '#0c0c0e', mark: '#f5f3ef' },
     bass: { main: '#141418', dark: '#08080a', mark: '#a51c30' },
+    andy: { main: '#1a1a1e', dark: '#0a0a0c', mark: '#e8c547' },
   };
 
   /** Compact abstract token for the playfield (shop keeps full portraits). */
@@ -353,6 +369,16 @@
       ctx.beginPath();
       ctx.arc(0, -14, 5.5, Math.PI, 0);
       ctx.fill();
+    } else if (typeId === 'andy') {
+      // dark coat — short hair + gold baton tip accent
+      ctx.fillStyle = '#2a1a0c';
+      ctx.beginPath();
+      ctx.arc(0, -14, 5.5, Math.PI, 0);
+      ctx.fill();
+      ctx.fillStyle = cols.mark;
+      ctx.beginPath();
+      ctx.arc(8, -10, 2.2, 0, Math.PI * 2);
+      ctx.fill();
     } else {
       // tenor — clean short hair
       ctx.fillStyle = '#5c3d1e';
@@ -361,8 +387,8 @@
       ctx.fill();
     }
 
-    // crimson sash slash across robe
-    ctx.strokeStyle = '#a51c30';
+    // crimson sash slash across robe (Andy: dark coat, gold slash)
+    ctx.strokeStyle = typeId === 'andy' ? '#c9a227' : '#a51c30';
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.moveTo(-8, 2);
@@ -374,6 +400,15 @@
       ctx.moveTo(0, -4);
       ctx.lineTo(-4, 4);
       ctx.lineTo(4, 4);
+      ctx.closePath();
+      ctx.fill();
+    } else if (typeId === 'andy') {
+      // white shirt triangle on dark coat
+      ctx.fillStyle = '#f5f3ef';
+      ctx.beginPath();
+      ctx.moveTo(0, -4);
+      ctx.lineTo(-3.5, 5);
+      ctx.lineTo(3.5, 5);
       ctx.closePath();
       ctx.fill();
     }
@@ -707,6 +742,11 @@
 
     ctx.restore();
   }
+
+  // Shop/portrait entry for Choir Andy (drawPart special-cases, but keep table complete).
+  PART_DRAW.andy = function (ctx, cx, cy) {
+    drawAndyClark(ctx, cx, cy + 8, { scale: 0.72, flash: false });
+  };
 
   function drawNote(ctx, typeId, cx, cy, style) {
     const st = style || 'normal';

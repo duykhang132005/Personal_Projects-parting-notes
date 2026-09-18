@@ -69,6 +69,9 @@
       stunDuration: def.stunDuration || 0,
       singTimer: isBoss ? (def.singInterval || 3.5) * 0.6 : 0,
       singFlash: 0,
+      slowTimer: 0,
+      slowMult: 1,
+      stunTimer: 0,
       x: start.x,
       y: start.y,
       wpIndex: 0,
@@ -77,17 +80,56 @@
     };
   }
 
-  /** Apply jazz cap / folk threshold to raw hit damage. */
-  function filterDamage(enemy, amount) {
+  /**
+   * Apply jazz cap / folk threshold to raw hit damage.
+   * opts.jazzCapBonus — extra Jazz cap from Alto Harmony auras.
+   * opts.folkAssist — raw-damage assist toward Folk threshold only (does not add damage).
+   */
+  function filterDamage(enemy, amount, opts) {
     let dmg = amount;
     if (!enemy || dmg <= 0) return 0;
     if (enemy.isBoss || enemy.type === 'andy') return dmg;
+    const o = opts || {};
     if (enemy.style === 'jazz') {
-      dmg = Math.min(dmg, JAZZ_CAP);
+      const cap = JAZZ_CAP + (o.jazzCapBonus || 0);
+      dmg = Math.min(dmg, cap);
     } else if (enemy.style === 'folk') {
-      if (dmg < FOLK_MIN) return 0;
+      const assist = o.folkAssist || 0;
+      if (dmg < FOLK_MIN) {
+        if (dmg + assist >= FOLK_MIN) return dmg; // allow full amount, not amount+assist
+        return 0;
+      }
     }
     return dmg;
+  }
+
+  /** Apply or refresh a movement slow (stronger mult / longer duration wins). */
+  function applySlow(enemy, duration, mult) {
+    if (!enemy || !enemy.alive || !(duration > 0)) return;
+    const m = mult != null ? mult : 0.65;
+    if (!enemy.slowTimer || enemy.slowTimer <= 0) {
+      enemy.slowTimer = duration;
+      enemy.slowMult = m;
+      return;
+    }
+    // Keep the stronger slow (lower mult) and the longer remaining duration.
+    if (m < (enemy.slowMult != null ? enemy.slowMult : 1)) {
+      enemy.slowMult = m;
+    }
+    enemy.slowTimer = Math.max(enemy.slowTimer, duration);
+  }
+
+  /**
+   * Freeze enemy movement for duration (does not stun towers).
+   * Boss notes (andy / isBoss) take a shorter stun.
+   */
+  function applyStun(enemy, duration) {
+    if (!enemy || !enemy.alive || !(duration > 0)) return;
+    let d = duration;
+    if (enemy.isBoss || enemy.type === 'andy') {
+      d *= 0.4; // resist cue pulse
+    }
+    enemy.stunTimer = Math.max(enemy.stunTimer || 0, d);
   }
 
   /** Tick boss sing timer; returns true if he just cued a stun. */
@@ -111,9 +153,28 @@
       return;
     }
 
+    if (e.slowTimer > 0) {
+      e.slowTimer -= dt;
+      if (e.slowTimer <= 0) {
+        e.slowTimer = 0;
+        e.slowMult = 1;
+      }
+    }
+
+    if (e.stunTimer > 0) {
+      e.stunTimer -= dt;
+      if (e.stunTimer < 0) e.stunTimer = 0;
+      // Movement frozen; boss may still sing via tickBossSing separately.
+      return;
+    }
+
     const target = waypoints[e.wpIndex + 1];
     const d = dist(e, target);
-    const step = e.speed * dt;
+    let speed = e.speed;
+    if (e.slowTimer > 0) {
+      speed *= e.slowMult != null ? e.slowMult : 0.65;
+    }
+    const step = speed * dt;
     if (d <= step || d < 0.5) {
       e.x = target.x;
       e.y = target.y;
@@ -187,6 +248,8 @@
     FOLK_MIN,
     createEnemy,
     filterDamage,
+    applySlow,
+    applyStun,
     tickBossSing,
     updateEnemy,
     drawNote,
