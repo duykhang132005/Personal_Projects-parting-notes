@@ -14,10 +14,11 @@
       cost: 50,
       range: 140,
       fireRate: 0.7,
-      damage: 14,
+      damage: 16,
       color: '#a51c30',
-      chainJumps: 2,
-      chainRange: 100,
+      // Chain unlocked via Damage path upgrades (base is single-target).
+      chainJumps: 0,
+      chainRange: 0,
       chainDamageScale: 0.65,
       projectileSpeed: 380,
       kind: 'soprano',
@@ -67,6 +68,27 @@
 
   const ORDER = ['soprano', 'alto', 'tenor', 'bass'];
 
+  // Crosspath rule (classic 2-path feel): each path max 3 tiers; after any upgrade
+  // Math.min(rangeTier, damageTier) <= 2 — i.e. max deep/cross is 3/2 or 2/3.
+  const UPGRADE_MAX = 3;
+  const UPGRADE_CROSS_CAP = 2;
+
+  const UPGRADE_COSTS = {
+    range: [30, 65, 120],
+    damage: [35, 75, 135],
+  };
+
+  const UPGRADE_NAMES = {
+    range: ['Longer Breath', 'Open Hall', 'Far Gallery'],
+    damage: ['Sharper Attack', 'Full Voice', 'Fortissimo'],
+  };
+
+  // Bass has infinite range — Range path buys attack speed (+ pierce at T3).
+  const BASS_RANGE_NAMES = ['Quicker Cue', 'Steady Tempo', 'Echo Pierce'];
+
+  // Soprano Damage path unlocks and deepens chain (base attack is single-target).
+  const SOPRANO_DAMAGE_NAMES = ['First Echo', 'Harmony Chain', 'Cascade'];
+
   function cellKey(c, r) {
     return c + ',' + r;
   }
@@ -97,11 +119,132 @@
       auraDamageBonus: def.auraDamageBonus || 0,
       targetMode: def.defaultTarget || 'front',
       stunTimer: 0,
+      upgRange: 0,
+      upgDamage: 0,
+      upgradeSpent: 0,
     };
   }
 
   function dist(a, b) {
     return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  /** Combat stats for a tower instance, including Range/Damage path bonuses. */
+  function combatStats(tower) {
+    const def = DEFS[tower.type] || DEFS[tower.kind];
+    const ur = tower.upgRange || 0;
+    const ud = tower.upgDamage || 0;
+    const s = {
+      range: def.range,
+      fireRate: def.fireRate,
+      damage: def.damage,
+      splash: def.splash || 0,
+      chainJumps: def.chainJumps || 0,
+      chainRange: def.chainRange || 0,
+      chainDamageScale: def.chainDamageScale || 0.7,
+      auraRange: def.auraRange || 0,
+      auraDamageBonus: def.auraDamageBonus || 0,
+      projectileSpeed: def.projectileSpeed || 320,
+    };
+
+    const type = def.id;
+
+    // --- Range path ---
+    if (type === 'bass') {
+      // Infinite range: faster singing + pierce at T3
+      if (ur >= 1) s.fireRate *= 0.88;
+      if (ur >= 2) s.fireRate *= 0.85;
+      if (ur >= 3) {
+        s.fireRate *= 0.82;
+        s.chainJumps = Math.max(s.chainJumps, 1);
+        s.chainRange = Math.max(s.chainRange, 90);
+        s.chainDamageScale = Math.min(s.chainDamageScale, 0.55);
+      }
+    } else {
+      if (type === 'soprano') {
+        if (ur >= 1) s.range += 25;
+        if (ur >= 2) s.range += 30;
+        if (ur >= 3) s.range += 40;
+        // Chain reach only matters after Damage path unlocks chaining.
+        if (ud >= 1) {
+          if (ur >= 1) s.chainRange += 10;
+          if (ur >= 2) s.chainRange += 20;
+          if (ur >= 3) s.chainRange += 25;
+        }
+      } else if (type === 'alto') {
+        if (ur >= 1) {
+          s.range += 20;
+          s.auraRange += 25;
+        }
+        if (ur >= 2) {
+          s.range += 25;
+          s.auraRange += 30;
+        }
+        if (ur >= 3) {
+          s.range += 30;
+          s.auraRange += 35;
+        }
+      } else if (type === 'tenor') {
+        if (ur >= 1) s.range += 22;
+        if (ur >= 2) s.range += 28;
+        if (ur >= 3) s.range += 35;
+      }
+    }
+
+    // --- Damage path ---
+    if (type === 'soprano') {
+      // T1 unlocks chain (1 jump); deeper tiers add jumps + scale.
+      if (ud >= 1) {
+        s.damage += 4;
+        s.chainJumps = Math.max(s.chainJumps, 1);
+        s.chainRange = Math.max(s.chainRange, 100);
+        s.chainDamageScale = 0.65;
+      }
+      if (ud >= 2) {
+        s.damage += 6;
+        s.chainJumps = Math.max(s.chainJumps, 2);
+        s.chainRange = Math.max(s.chainRange, 110);
+        s.chainDamageScale = 0.7;
+      }
+      if (ud >= 3) {
+        s.damage += 10;
+        s.chainJumps = Math.max(s.chainJumps, 3);
+        s.chainRange = Math.max(s.chainRange, 125);
+        s.chainDamageScale = 0.75;
+      }
+    } else if (type === 'alto') {
+      if (ud >= 1) {
+        s.damage += 3;
+        s.auraDamageBonus += 0.05;
+      }
+      if (ud >= 2) {
+        s.damage += 4;
+        s.auraDamageBonus += 0.07;
+      }
+      if (ud >= 3) {
+        s.damage += 7;
+        s.auraDamageBonus += 0.1;
+      }
+    } else if (type === 'tenor') {
+      if (ud >= 1) {
+        s.damage += 5;
+        s.splash += 8;
+      }
+      if (ud >= 2) {
+        s.damage += 7;
+        s.splash += 10;
+      }
+      if (ud >= 3) {
+        s.damage += 12;
+        s.splash += 14;
+      }
+    } else if (type === 'bass') {
+      if (ud >= 1) s.damage += 12;
+      if (ud >= 2) s.damage += 16;
+      if (ud >= 3) s.damage += 27;
+    }
+
+    return s;
   }
 
   function pathProgress(e, waypoints) {
@@ -116,10 +259,11 @@
   }
 
   function inRangeEnemies(tower, enemies) {
+    const stats = combatStats(tower);
     const list = [];
     for (const e of enemies) {
       if (!e.alive) continue;
-      if (dist(tower, e) > tower.range) continue;
+      if (dist(tower, e) > stats.range) continue;
       list.push(e);
     }
     return list;
@@ -186,9 +330,10 @@
     let mult = 1;
     for (const other of towers) {
       if (other === tower) continue;
-      if (!other.auraRange || !other.auraDamageBonus) continue;
-      if (dist(tower, other) <= other.auraRange) {
-        mult += other.auraDamageBonus;
+      const os = combatStats(other);
+      if (!os.auraRange || !os.auraDamageBonus) continue;
+      if (dist(tower, other) <= os.auraRange) {
+        mult += os.auraDamageBonus;
       }
     }
     return mult;
@@ -199,8 +344,9 @@
     const target = pickTarget(tower, enemies, waypoints);
     if (!target) return;
 
+    const stats = combatStats(tower);
     const mult = damageMultiplier(tower, towers);
-    const dmg = tower.damage * mult;
+    const dmg = stats.damage * mult;
 
     projectiles.push(
       PNProjectiles.createProjectile({
@@ -209,18 +355,18 @@
         tx: target.x,
         ty: target.y,
         target,
-        speed: tower.projectileSpeed,
+        speed: stats.projectileSpeed,
         damage: dmg,
         color: tower.color,
-        splash: tower.splash || 0,
-        chainLeft: tower.chainJumps || 0,
-        chainRange: tower.chainRange || 0,
-        chainDamageScale: tower.chainDamageScale || 0.7,
+        splash: stats.splash || 0,
+        chainLeft: stats.chainJumps || 0,
+        chainRange: stats.chainRange || 0,
+        chainDamageScale: stats.chainDamageScale || 0.7,
         fromTower: tower,
         kind: tower.kind,
       })
     );
-    tower.cooldown = tower.fireRate;
+    tower.cooldown = stats.fireRate;
   }
 
   function updateTower(tower, dt, enemies, towers, projectiles, waypoints) {
@@ -243,26 +389,27 @@
   function drawTower(ctx, tower, selected) {
     const x = Math.round(tower.x);
     const y = Math.round(tower.y);
+    const stats = combatStats(tower);
 
-    if (tower.auraRange) {
+    if (stats.auraRange) {
       ctx.strokeStyle = selected
         ? 'rgba(90, 154, 74, 0.55)'
         : 'rgba(90, 154, 74, 0.28)';
       ctx.lineWidth = 2;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
-      ctx.arc(x, y, tower.auraRange, 0, Math.PI * 2);
+      ctx.arc(x, y, stats.auraRange, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
     }
 
-    if (selected && Number.isFinite(tower.range)) {
+    if (selected && Number.isFinite(stats.range)) {
       ctx.strokeStyle = 'rgba(243, 239, 228, 0.45)';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(x, y, tower.range, 0, Math.PI * 2);
+      ctx.arc(x, y, stats.range, 0, Math.PI * 2);
       ctx.stroke();
-    } else if (selected && !Number.isFinite(tower.range)) {
+    } else if (selected && !Number.isFinite(stats.range)) {
       ctx.strokeStyle = 'rgba(47, 93, 140, 0.35)';
       ctx.lineWidth = 2;
       ctx.setLineDash([6, 4]);
@@ -296,6 +443,17 @@
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('⚡', x, y - 22);
+    }
+
+    // Tier pips under selected tower
+    if (selected && ((tower.upgRange || 0) > 0 || (tower.upgDamage || 0) > 0)) {
+      const ur = tower.upgRange || 0;
+      const ud = tower.upgDamage || 0;
+      ctx.font = '10px Georgia, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = 'rgba(243, 239, 228, 0.9)';
+      ctx.fillText('R' + ur + ' · D' + ud, x, y + 18);
     }
   }
 
@@ -333,14 +491,98 @@
   }
 
   function sellValue(tower) {
-    return Math.floor((tower.cost || 0) * 0.5);
+    const invested = (tower.cost || 0) + (tower.upgradeSpent || 0);
+    return Math.floor(invested * 0.5);
+  }
+
+  function upgradeTier(tower, path) {
+    return path === 'range' ? tower.upgRange || 0 : tower.upgDamage || 0;
+  }
+
+  function nextUpgradeCost(tower, path) {
+    const tier = upgradeTier(tower, path);
+    const costs = UPGRADE_COSTS[path];
+    if (!costs || tier >= costs.length) return null;
+    return costs[tier];
+  }
+
+  function upgradeName(tower, path, tierIndex) {
+    if (path === 'range' && tower && tower.type === 'bass') {
+      return BASS_RANGE_NAMES[tierIndex] || UPGRADE_NAMES.range[tierIndex];
+    }
+    if (path === 'damage' && tower && tower.type === 'soprano') {
+      return SOPRANO_DAMAGE_NAMES[tierIndex] || UPGRADE_NAMES.damage[tierIndex];
+    }
+    const names = UPGRADE_NAMES[path];
+    return names ? names[tierIndex] : 'Upgrade';
+  }
+
+  function crosspathOk(nextRange, nextDamage) {
+    if (nextRange > UPGRADE_MAX || nextDamage > UPGRADE_MAX) return false;
+    if (Math.min(nextRange, nextDamage) > UPGRADE_CROSS_CAP) return false;
+    return true;
+  }
+
+  function canBuyUpgrade(tower, path, gold) {
+    if (!tower || (path !== 'range' && path !== 'damage')) {
+      return { ok: false, reason: 'none' };
+    }
+    const ur = tower.upgRange || 0;
+    const ud = tower.upgDamage || 0;
+    const nextR = path === 'range' ? ur + 1 : ur;
+    const nextD = path === 'damage' ? ud + 1 : ud;
+    if (path === 'range' && ur >= UPGRADE_MAX) {
+      return { ok: false, reason: 'maxed' };
+    }
+    if (path === 'damage' && ud >= UPGRADE_MAX) {
+      return { ok: false, reason: 'maxed' };
+    }
+    if (!crosspathOk(nextR, nextD)) {
+      return { ok: false, reason: 'crosspath' };
+    }
+    const cost = nextUpgradeCost(tower, path);
+    if (cost == null) return { ok: false, reason: 'maxed' };
+    if (gold < cost) return { ok: false, reason: 'gold', cost: cost };
+    const nextTierIndex = path === 'range' ? ur : ud;
+    return { ok: true, cost: cost, name: upgradeName(tower, path, nextTierIndex) };
+  }
+
+  function buyUpgrade(tower, path, gold) {
+    const check = canBuyUpgrade(tower, path, gold);
+    if (!check.ok) return { ok: false, reason: check.reason, gold: gold };
+    const cost = check.cost;
+    if (path === 'range') tower.upgRange = (tower.upgRange || 0) + 1;
+    else tower.upgDamage = (tower.upgDamage || 0) + 1;
+    tower.upgradeSpent = (tower.upgradeSpent || 0) + cost;
+    return { ok: true, cost: cost, gold: gold - cost };
+  }
+
+  function upgradeInfo(tower, path) {
+    const tier = upgradeTier(tower, path);
+    const cost = nextUpgradeCost(tower, path);
+    const maxed = cost == null;
+    const name = maxed
+      ? 'Maxed'
+      : upgradeName(tower, path, tier);
+    return {
+      path: path,
+      tier: tier,
+      max: UPGRADE_MAX,
+      cost: cost,
+      name: name,
+      maxed: maxed,
+    };
   }
 
   global.PNTowers = {
     DEFS,
     ORDER,
     TARGET_MODES,
+    UPGRADE_COSTS,
+    UPGRADE_MAX,
+    UPGRADE_CROSS_CAP,
     createTower,
+    combatStats,
     updateTower,
     stunAll,
     drawTower,
@@ -349,5 +591,10 @@
     cellKey,
     dist,
     sellValue,
+    canBuyUpgrade,
+    buyUpgrade,
+    upgradeInfo,
+    nextUpgradeCost,
+    upgradeName,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

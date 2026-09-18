@@ -121,7 +121,6 @@
     hideOnboarding();
     PNUI.showScreen('title');
     requestAnimationFrame(() => PNUI.paintTitleArt());
-    const a = audio();
   }
 
   function goAdventure() {
@@ -130,9 +129,23 @@
     hideOnboarding();
     PNUI.showScreen('adventure');
     PNUI.renderAdventure(startLevel);
-    const a = audio();
   }
 
+  let dictReturn = 'title';
+
+  function goDictionary(from) {
+    dictReturn = from === 'adventure' ? 'adventure' : 'title';
+    state.screen = 'dictionary';
+    state.paused = true;
+    hideOnboarding();
+    PNUI.showScreen('dictionary');
+    PNUI.renderDictionary({ tab: 'singers' });
+  }
+
+  function leaveDictionary() {
+    if (dictReturn === 'adventure') goAdventure();
+    else goTitle();
+  }
 
   function showLevelTransition(cleared, next) {
     pendingNextLevelId = next ? next.id : null;
@@ -375,6 +388,18 @@
     if (a) a.sell();
   }
 
+  function buySelectedUpgrade(path) {
+    const t = state.selectedTower;
+    if (!t || state.status !== 'playing') return false;
+    if (!PNTowers.buyUpgrade) return false;
+    const result = PNTowers.buyUpgrade(t, path, state.gold);
+    if (!result.ok) return false;
+    state.gold = result.gold;
+    const a = audio();
+    if (a) a.uiClick();
+    return true;
+  }
+
   function cellFromEvent(ev) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -411,11 +436,74 @@
     PNUI.syncShop(state);
   });
 
+  function startWaveIfReady() {
+    if (state.status !== 'playing' || !director) return false;
+    let started = false;
+    if (director.phase === 'between') {
+      director.skipBetween();
+      started = true;
+    } else if (director.phase === 'ready') {
+      director.begin();
+      started = true;
+    }
+    if (started) {
+      const a = audio();
+      if (a) a.startWave();
+    }
+    PNUI.syncControls(state, director);
+    return started;
+  }
+
+  function togglePause() {
+    if (state.status !== 'playing') return;
+    state.paused = !state.paused;
+    PNUI.syncControls(state, director);
+  }
+
+  function toggleSpeed() {
+    state.speed = state.speed === 1 ? 2 : 1;
+    PNUI.syncControls(state, director);
+  }
+
   function bindControls() {
     document.getElementById('btn-adventure')?.addEventListener('click', () => {
       const a = audio();
       if (a) a.uiClick();
       goAdventure();
+    });
+    document.getElementById('btn-title-dictionary')?.addEventListener('click', () => {
+      const a = audio();
+      if (a) a.uiClick();
+      goDictionary('title');
+    });
+    document.getElementById('btn-adv-dictionary')?.addEventListener('click', () => {
+      const a = audio();
+      if (a) a.uiClick();
+      goDictionary('adventure');
+    });
+    document.getElementById('btn-dict-back')?.addEventListener('click', () => {
+      const a = audio();
+      if (a) a.uiClick();
+      leaveDictionary();
+    });
+    document.querySelectorAll('[data-dict-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const a = audio();
+        if (a) a.uiClick();
+        const tab = btn.getAttribute('data-dict-tab');
+        PNUI.setDictionaryTab(tab);
+        requestAnimationFrame(() => PNUI.paintDictionaryIcons());
+      });
+    });
+    document.getElementById('btn-map-prev')?.addEventListener('click', () => {
+      const a = audio();
+      if (a) a.uiClick();
+      PNUI.adventurePageDelta(-1);
+    });
+    document.getElementById('btn-map-next')?.addEventListener('click', () => {
+      const a = audio();
+      if (a) a.uiClick();
+      PNUI.adventurePageDelta(1);
     });
     document.getElementById('btn-adv-back')?.addEventListener('click', () => {
       const a = audio();
@@ -494,33 +582,21 @@
       });
     });
 
-    document.getElementById('btn-start')?.addEventListener('click', () => {
-      if (state.status !== 'playing' || !director) return;
-      let started = false;
-      if (director.phase === 'between') {
-        director.skipBetween();
-        started = true;
-      } else if (director.phase === 'ready') {
-        director.begin();
-        started = true;
-      }
-      if (started) {
-        const a = audio();
-        if (a) a.startWave();
-      }
-      PNUI.syncControls(state, director);
+    document.querySelectorAll('[data-upgrade]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const path = btn.getAttribute('data-upgrade');
+        if (!path) return;
+        buySelectedUpgrade(path);
+        PNUI.syncShop(state);
+        PNUI.renderHud(state, director);
+      });
     });
 
-    document.getElementById('btn-pause')?.addEventListener('click', () => {
-      if (state.status !== 'playing') return;
-      state.paused = !state.paused;
-      PNUI.syncControls(state, director);
-    });
+    document.getElementById('btn-start')?.addEventListener('click', startWaveIfReady);
 
-    document.getElementById('btn-speed')?.addEventListener('click', () => {
-      state.speed = state.speed === 1 ? 2 : 1;
-      PNUI.syncControls(state, director);
-    });
+    document.getElementById('btn-pause')?.addEventListener('click', togglePause);
+
+    document.getElementById('btn-speed')?.addEventListener('click', toggleSpeed);
 
     document.getElementById('btn-sell')?.addEventListener('click', () => {
       sellSelected();
@@ -530,8 +606,7 @@
     document.addEventListener('keydown', (ev) => {
       if (state.screen !== 'play') return;
       if (ev.key === 'Escape') {
-        state.selectedTower = null;
-        state.selectedType = null;
+        togglePause();
       }
       const hotkeys = { '1': 'soprano', '2': 'alto', '3': 'tenor', '4': 'bass' };
       if (hotkeys[ev.key]) {
@@ -541,7 +616,8 @@
       }
       if (ev.key === ' ') {
         ev.preventDefault();
-        if (state.status === 'playing') state.paused = !state.paused;
+        const started = startWaveIfReady();
+        if (!started && state.status === 'playing') toggleSpeed();
       }
       if (ev.key === 's' || ev.key === 'S') sellSelected();
       PNUI.syncShop(state);

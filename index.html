@@ -17,9 +17,14 @@
       <div class="title-scrim" aria-hidden="true"></div>
       <div class="title-center">
         <h1 class="title-logo">Parting <em>Notes</em></h1>
-        <button type="button" class="title-start" id="btn-adventure">
-          <span class="title-start-label">Play</span>
-        </button>
+        <div class="title-actions">
+          <button type="button" class="title-start" id="btn-adventure">
+            <span class="title-start-label">Play</span>
+          </button>
+          <button type="button" class="title-start title-dict" id="btn-title-dictionary">
+            <span class="title-start-label">Dictionary</span>
+          </button>
+        </div>
         <button type="button" class="mute-btn title-mute" data-mute-btn aria-pressed="false" title="Mute sound">Mute</button>
       </div>
     </section>
@@ -27,11 +32,45 @@
     <!-- Adventure map select -->
     <section id="screen-adventure" class="screen screen-adventure" hidden>
       <header class="adv-header">
-        <button type="button" class="ctrl-btn" id="btn-adv-back">← Title</button>
-        <h2>Adventure</h2>
-        <p class="adv-sub">From the lawn to closing night. Clear one to unlock the next.</p>
+        <div class="adv-header-bar">
+          <button type="button" class="ctrl-btn" id="btn-adv-back">← Title</button>
+          <h2>Adventure</h2>
+          <button type="button" class="ctrl-btn" id="btn-adv-dictionary">Dictionary</button>
+        </div>
+        <p class="adv-sub">Approach the hall from outside in. Clear a stage to unlock the next.</p>
       </header>
-      <div id="level-list" class="level-list"></div>
+      <div class="adv-map-shell">
+        <button type="button" class="map-nav" id="btn-map-prev" aria-label="Previous pages">‹</button>
+        <div class="adv-map-panel">
+          <p class="adv-page-label" id="adv-page-label"></p>
+          <div id="adv-map" class="adv-map" role="list" aria-label="Stage path"></div>
+          <div class="adv-detail" id="adv-detail">
+            <div class="adv-detail-text">
+              <h3 id="adv-detail-name">Choose a stage</h3>
+              <p id="adv-detail-blurb">Hover or focus a node along the path into the hall.</p>
+            </div>
+            <span class="adv-detail-meta" id="adv-detail-meta"></span>
+          </div>
+        </div>
+        <button type="button" class="map-nav" id="btn-map-next" aria-label="Next pages">›</button>
+      </div>
+      <!-- legacy hook kept empty for any old refs -->
+      <div id="level-list" class="level-list" hidden></div>
+    </section>
+
+    <!-- Dictionary / Codex -->
+    <section id="screen-dictionary" class="screen screen-dictionary" hidden>
+      <header class="dict-header">
+        <button type="button" class="ctrl-btn" id="btn-dict-back">← Back</button>
+        <h2>Dictionary</h2>
+        <p class="dict-sub">Choir voices and the notes that walk the path.</p>
+      </header>
+      <div class="dict-tabs" role="tablist" aria-label="Dictionary sections">
+        <button type="button" class="dict-tab active" role="tab" id="btn-dict-tab-singers" data-dict-tab="singers" aria-selected="true">Singers</button>
+        <button type="button" class="dict-tab" role="tab" id="btn-dict-tab-notes" data-dict-tab="notes" aria-selected="false">Notes</button>
+      </div>
+      <div id="dict-panel-singers" class="dict-panel" data-dict-panel="singers" role="tabpanel"></div>
+      <div id="dict-panel-notes" class="dict-panel" data-dict-panel="notes" role="tabpanel" hidden></div>
     </section>
 
 
@@ -117,11 +156,33 @@
           </div>
         </div>
 
+        <div id="upgrade-panel" class="upgrade-panel" hidden>
+          <span class="upgrade-heading">Upgrades</span>
+          <div class="upgrade-cols" role="group" aria-label="Tower upgrades">
+            <div class="upgrade-col">
+              <span class="upgrade-path-label">Range</span>
+              <span class="upgrade-pips" data-upgrade-pips="range" aria-hidden="true">○○○</span>
+              <button type="button" class="ctrl-btn upgrade-btn" data-upgrade="range">
+                <span class="upgrade-name" data-upgrade-name="range">Longer Breath</span>
+                <span class="upgrade-cost" data-upgrade-cost="range">30g</span>
+              </button>
+            </div>
+            <div class="upgrade-col">
+              <span class="upgrade-path-label">Damage</span>
+              <span class="upgrade-pips" data-upgrade-pips="damage" aria-hidden="true">○○○</span>
+              <button type="button" class="ctrl-btn upgrade-btn" data-upgrade="damage">
+                <span class="upgrade-name" data-upgrade-name="damage">Sharper Attack</span>
+                <span class="upgrade-cost" data-upgrade-cost="damage">35g</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="shop" role="toolbar" aria-label="Voice parts">
-          <button type="button" class="shop-btn" data-tower="soprano" title="Chain (1)">
+          <button type="button" class="shop-btn" data-tower="soprano" title="Solo lead — chain via Damage upgrades (1)">
             <canvas class="shop-icon" data-icon="soprano" width="64" height="64" aria-hidden="true"></canvas>
             <span class="shop-name">Soprano</span>
-            <span class="shop-role">Chain</span>
+            <span class="shop-role">Solo</span>
             <span class="shop-cost" data-cost="50">50g</span>
           </button>
           <button type="button" class="shop-btn" data-tower="alto" title="Chip + buff aura; +1 gold per kill each (2)">
@@ -145,8 +206,8 @@
         </div>
 
         <p class="hint" id="hint">
-          Pick a singer (click again or Esc to cancel), place on open ground, then <strong>Start wave</strong>.
-          Click a placed singer to set targeting · <kbd>S</kbd> sell · Space pause.
+          Pick a singer (click again to cancel), place on open ground, then <strong>Start wave</strong>.
+          Click a placed singer to set targeting / buy <strong>Range</strong> &amp; <strong>Damage</strong> upgrades (max 3/2) · <kbd>S</kbd> sell · <kbd>Space</kbd> start next wave / toggle speed · <kbd>Esc</kbd> pause.
           <br />Jazz notes glitter and shrug heavy hits · Folk notes need big damage · each Alto adds +1g per kill.
           Closing Night: watch for conductor <strong>Andy Clark</strong> — his cue stuns the choir.
         </p>
@@ -160,7 +221,7 @@
         <h2 id="onboard-title" class="onboard-title">Warm-up tips</h2>
 
         <div data-tip-step="0">
-          <p class="onboard-body"><strong>1. Pick Soprano</strong> — tap the Soprano seat in the shop (hotkey <kbd>1</kbd>). Chain lines for Fair Harvard energy.</p>
+          <p class="onboard-body"><strong>1. Pick Soprano</strong> — tap the Soprano seat in the shop (hotkey <kbd>1</kbd>). She hits one note at a time; buy Damage upgrades to unlock chain echoes.</p>
         </div>
         <div data-tip-step="1" hidden>
           <p class="onboard-body"><strong>2. Place</strong> — click open grass beside the path. Ghost range shows where she’ll sing.</p>
@@ -169,7 +230,7 @@
           <p class="onboard-body"><strong>3. Start wave</strong> — when the lawn is set, press <strong>Start wave</strong>. Notes march toward the hall.</p>
         </div>
         <div data-tip-step="3" hidden>
-          <p class="onboard-body"><strong>4. Targeting (optional)</strong> — click a placed singer to choose Front / Back / Closest / Highest HP. Later stages tip a hat to Abendlied, Glorious Apollo, and closing-night cues.</p>
+          <p class="onboard-body"><strong>4. Targeting &amp; upgrades</strong> — click a placed singer to set Front / Back / Closest / Highest HP, and buy Range or Damage upgrades (one path deep, a little on the other). Later stages tip a hat to Abendlied, Glorious Apollo, and closing-night cues.</p>
         </div>
 
         <div class="onboard-actions">

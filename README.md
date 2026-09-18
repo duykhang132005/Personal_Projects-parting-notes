@@ -16,7 +16,7 @@ npx --yes serve .
 
 | Part | Role |
 |------|------|
-| Soprano | Chain |
+| Soprano | Solo (chain via Damage upgrades) |
 | Alto | Chip + damage aura; +5 gold per kill (stacks per Alto) |
 | Tenor | AoE splash |
 | Bass | Infinite-range sniper |
