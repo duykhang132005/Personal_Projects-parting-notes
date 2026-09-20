@@ -16,10 +16,13 @@ npx --yes serve .
 
 | Part | Role |
 |------|------|
-| Soprano | Solo (chain via Damage upgrades) |
-| Alto | Chip + damage aura; +5 gold per kill (stacks per Alto) |
-| Tenor | AoE splash |
-| Bass | Infinite-range sniper |
+| Soprano | Solo lead; Tone path unlocks chain (Echo → Cascade → Vibrato). Breath path ends in Melody (prefers chaining to a different note type). |
+| Alto | Chip + damage aura; **+1g per kill** base, **+2g** with Articulate. Support path ends in Harmony (Jazz/Folk assist in aura). |
+| Tenor | AoE splash; Line path ends in Crescendo. |
+| Bass | Infinite-range sniper; Tempo path (On Beat → Steady Tempo) + Weight path (Downbeat → Fermata). |
+| Andy | Cue support sniper — **unlocks after clearing Closing Night**. Hotkey 5. |
+
+Each singer has two upgrade paths (crosspath max **3/2**). Column labels are voice-specific (e.g. Soprano Breath / Tone, Bass Tempo / Weight).
 
 Per-tower targeting: Front / Back / Closest / Highest HP.
 
@@ -31,7 +34,7 @@ Per-tower targeting: Front / Back / Closest / Highest HP.
 | Jazz | Glittery; each hit capped (~10 dmg) |
 | Folk | Brown; immune to hits below ~20 dmg |
 
-**Boss:** Andy Clark (Closing Night) — conductor who periodically stuns all towers.
+**Boss:** Andy Clark (Closing Night) — conductor who periodically stuns all towers. Clear the stage to recruit **Choir Andy** for the shop.
 
 ## Stack
 
@@ -39,12 +42,11 @@ Vanilla HTML, CSS, and JS. MIT — see [LICENSE](LICENSE).
 
 ## Audio
 
-- **SFX:** procedural Web Audio (`js/audio.js`) — place, sell, wave start, hits (pitched by voice part), kills, jazz CAP shimmer, folk BLOCK thud, life leak, win/lose, Andy conductor cue, UI clicks.
-- **BGM:** optional public-domain file in `assets/audio/` (e.g. `fair-harvard.mp3`) for the title screen; otherwise a soft procedural choral-ish pad / arpeggio (college-song atmosphere, not a rip). Play bed is the same pad, ducked.
-- Mute toggles persist as `parting-notes-mute`.
-- We do **not** redistribute modern Harvard Glee Club / Spotify / YouTube recordings. For listening, visit [harvardgleeclub.org](https://harvardgleeclub.org). See `assets/audio/README.md` for attribution if you add a PD track.
+- **SFX:** procedural Web Audio (`js/audio.js`).
+- **BGM:** continuous across screens; prefers legal files in `assets/audio/repertoire/`, then `fair-harvard.mp3`, then a soft procedural pad. Same track does not restart on navigation.
+- Mute persists as `parting-notes-mute`.
+- Spotify HGC2627 is listen-along / credit only — do not rip streams into the build. See `assets/audio/README.md`.
 
 ## First-run tips
 
-Lawn Approach shows a short onboarding overlay once. Dismiss or **Don’t show again** (`parting-notes-seen-tips`).
-
+Lawn Approach shows a short onboarding overlay once. In play, **Help** opens the full controls sheet. Dismiss tips or **Don't show again** (`parting-notes-seen-tips`).
