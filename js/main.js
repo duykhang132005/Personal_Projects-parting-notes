@@ -46,23 +46,49 @@
     return !!(ov && !ov.hidden);
   }
 
+  // Where keyboard focus was before a dialog opened, so closing it can put focus back.
+  let playHelpReturnFocus = null;
+  let onboardReturnFocus = null;
+
+  function restoreFocus(el) {
+    if (el && el.isConnected && !el.disabled && typeof el.focus === 'function') el.focus();
+  }
+
   function openPlayHelp() {
     const ov = document.getElementById('play-help-overlay');
     if (!ov) return;
+    if (ov.hidden) playHelpReturnFocus = document.activeElement;
     ov.hidden = false;
+    const closeBtn = document.getElementById('btn-play-help-close');
+    if (closeBtn) closeBtn.focus();
   }
 
   function closePlayHelp() {
     const ov = document.getElementById('play-help-overlay');
     if (!ov) return;
+    const wasOpen = !ov.hidden;
     ov.hidden = true;
+    if (wasOpen) {
+      restoreFocus(playHelpReturnFocus);
+      playHelpReturnFocus = null;
+    }
+  }
+
+  function isOnboardingOpen() {
+    const ov = document.getElementById('onboard-overlay');
+    return !!(ov && !ov.hidden);
   }
 
   function hideOnboarding() {
     const ov = document.getElementById('onboard-overlay');
     if (ov) {
+      const wasOpen = !ov.hidden;
       ov.hidden = true;
       ov.classList.remove('visible');
+      if (wasOpen) {
+        restoreFocus(onboardReturnFocus);
+        onboardReturnFocus = null;
+      }
     }
   }
 
@@ -71,8 +97,11 @@
     if (tipsSeen()) return;
     const ov = document.getElementById('onboard-overlay');
     if (!ov) return;
+    onboardReturnFocus = document.activeElement;
     ov.hidden = false;
     ov.classList.add('visible');
+    const tipNextBtn = document.getElementById('btn-tip-next');
+    if (tipNextBtn) tipNextBtn.focus();
     // Reset to first step
     ov.querySelectorAll('[data-tip-step]').forEach(function (el, i) {
       el.hidden = i !== 0;
@@ -728,11 +757,45 @@
       PNUI.syncShop(state);
     });
 
+    // Debug tools (off unless the page URL has ?debug): Choir Andy is unlocked without touching
+    // the saved progress, and the adventure map can jump to the next uncleared stage.
+    if (PNLevels.isDebug && PNLevels.isDebug()) {
+      const bar = document.querySelector('#screen-adventure .adv-header-bar');
+      if (bar) {
+        const dbg = document.createElement('button');
+        dbg.type = 'button';
+        dbg.className = 'ctrl-btn';
+        dbg.id = 'btn-adv-debug-next';
+        dbg.title = 'Debug: jump to the next uncleared stage (N)';
+        dbg.textContent = 'Debug: next stage';
+        dbg.addEventListener('click', () => PNUI.jumpToNextUncleared());
+        bar.appendChild(dbg);
+      }
+      document.title += ' (debug)';
+      document.addEventListener('keydown', (ev) => {
+        if (state.screen !== 'adventure' || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+        if (ev.key === 'n' || ev.key === 'N') PNUI.jumpToNextUncleared();
+      });
+      console.info('[Parting Notes] debug mode on: Choir Andy unlocked, press N on the map for the next uncleared stage.');
+    }
+
+    // A focused button would also react to Space on key release. Space belongs to the game while
+    // playing, unless a dialog is open and the player is using its buttons.
+    document.addEventListener('keyup', (ev) => {
+      if (state.screen !== 'play' || ev.key !== ' ') return;
+      if (isPlayHelpOpen() || isOnboardingOpen()) return;
+      ev.preventDefault();
+    });
+
     document.addEventListener('keydown', (ev) => {
       if (state.screen !== 'play') return;
       if (ev.key === 'Escape') {
         if (isPlayHelpOpen()) {
           closePlayHelp();
+          return;
+        }
+        if (isOnboardingOpen()) {
+          hideOnboarding();
           return;
         }
         togglePause();

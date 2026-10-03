@@ -328,9 +328,27 @@
     return p;
   }
 
+  // Debug mode is off for players. Open the game with ?debug in the URL to turn it on.
+  // It never writes to the saved progress; it only changes what the screens report.
+  const DEBUG = (function () {
+    try {
+      const q = new URLSearchParams(global.location ? global.location.search : '');
+      if (!q.has('debug')) return false;
+      const v = String(q.get('debug') || '').toLowerCase();
+      return v !== '0' && v !== 'false' && v !== 'off';
+    } catch (_) {
+      return false;
+    }
+  })();
+
+  function isDebug() {
+    return DEBUG;
+  }
+
   function isTowerUnlocked(id) {
     if (!id) return false;
     if (BASE_TOWERS.includes(id)) return true;
+    if (DEBUG) return true;
     const p = loadProgress();
     return Array.isArray(p.towersUnlocked) && p.towersUnlocked.includes(id);
   }
@@ -359,5 +377,6 @@
     unlockTower,
     isTowerUnlocked,
     hasUnlockedAndy,
+    isDebug,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -13,6 +13,33 @@
   let htmlBgm = null;
   let htmlBgmUrl = null; // relative path currently loaded
   let trackCache = {}; // mode -> url|false
+  // URLs that failed to load (for example a repertoire file that is not there yet). Shared across
+  // modes and kept for this tab session (10 minute window) so a missing file is probed once, not on
+  // every screen change or reload. Add ?debug to the page URL to ignore the remembered misses.
+  const MISS_KEY = 'pn_bgm_missing_v1';
+  const MISS_TTL_MS = 10 * 60 * 1000;
+  let missedUrls = {};
+  let missedSince = 0;
+  (function loadMisses() {
+    try {
+      if (/[?&]debug(?:[=&]|$)/i.test(global.location ? global.location.search : '')) return;
+      const raw = global.sessionStorage.getItem(MISS_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (!d || typeof d.u !== 'object' || !d.u || Date.now() - d.t > MISS_TTL_MS) return;
+      missedUrls = d.u;
+      missedSince = d.t;
+    } catch (_) {
+      missedUrls = {};
+    }
+  })();
+  function rememberMiss(url) {
+    missedUrls[url] = 1;
+    if (!missedSince) missedSince = Date.now();
+    try {
+      global.sessionStorage.setItem(MISS_KEY, JSON.stringify({ t: missedSince, u: missedUrls }));
+    } catch (_) {}
+  }
   // Candidate files to probe (browsers cannot list folders). Drop legal tracks into repertoire/.
   const BGM_CANDIDATES = {
     title: [
@@ -340,6 +367,10 @@
   }
 
   function probeUrl(url, done) {
+    if (missedUrls[url]) {
+      done(null);
+      return;
+    }
     const a = new Audio();
     let settled = false;
     const finish = function (ok) {
@@ -354,6 +385,7 @@
       finish(true);
     };
     a.onerror = function () {
+      rememberMiss(url);
       finish(false);
     };
     a.src = url;

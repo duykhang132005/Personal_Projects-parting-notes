@@ -339,6 +339,26 @@
     }
   }
 
+  // Debug helper: show the page with the first stage that has not been cleared and focus its node.
+  function jumpToNextUncleared() {
+    const progress = PNLevels.loadProgress();
+    const all = PNLevels.LEVELS;
+    const target = all.find((lv) => !progress.cleared.includes(lv.id)) || all[all.length - 1];
+    if (!target) return null;
+    for (let p = 0; p < MAP_PAGES.length; p++) {
+      if (MAP_PAGES[p].indices.includes(target.index)) {
+        setAdventurePage(p);
+        break;
+      }
+    }
+    adventureFocusId = target.id;
+    renderAdventure(adventureOnPick || function () {});
+    const mapEl = document.getElementById('adv-map');
+    const node = mapEl && mapEl.querySelector('[data-level-id="' + target.id + '"]');
+    if (node && typeof node.focus === 'function') node.focus();
+    return target;
+  }
+
   function adventurePageDelta(delta) {
     setAdventurePage(adventureMapPage + delta);
     if (typeof adventureOnPick === 'function') {
@@ -609,6 +629,7 @@
     adventurePageDelta,
     setAdventurePage,
     getAdventurePage,
+    jumpToNextUncleared,
     renderDictionary,
     setDictionaryTab,
     paintDictionaryIcons,
