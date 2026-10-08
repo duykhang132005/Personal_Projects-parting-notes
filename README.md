@@ -45,7 +45,31 @@ Vanilla HTML, CSS, and JS. MIT — see [LICENSE](LICENSE).
 - **SFX:** procedural Web Audio (`js/audio.js`).
 - **BGM:** continuous across screens; prefers legal files in `assets/audio/repertoire/`, then `fair-harvard.mp3`, then a soft procedural pad. Same track does not restart on navigation.
 - Mute persists as `parting-notes-mute`.
+- **Music volume** slider (0 to 100) sits next to Mute on the title and play screens and only changes music, not SFX. Saved as `pn_music_volume_v1`. Mute still silences everything; unmute returns to the slider level. Game hotkeys (except Esc) are ignored while the slider has focus.
 - Spotify HGC2627 is listen-along / credit only — do not rip streams into the build. See `assets/audio/README.md`.
+
+### Adding music
+
+Only legal tracks (public domain or your own recordings) go in `assets/audio/repertoire/`. Browsers cannot list folders, so `js/audio.js` tries a fixed list (`BGM_CANDIDATES`) in order and plays the first file that loads. Only these exact names are tried; anything else (e.g. `title-02.mp3`) is ignored until it is added to that list.
+
+| Bed | Files tried in `repertoire/` |
+|-----|------------------------------|
+| `title-` (title, Dictionary, congrats) | `title-01.mp3`, `title-01.ogg`, `glorious-apollo.mp3` |
+| `adventure-` (map) | `adventure-01.mp3`, `adventure-01.ogg`, `abendlied.mp3`, `o-vos-omnes.mp3` |
+| `play-` (stages 1 to 9) | `play-01.mp3`, `play-01.ogg`, `football-songs.mp3` |
+| `closing-` (Closing Night) | `closing-01.mp3`, `closing-01.ogg`, `come-ye-disconsolate.mp3` |
+
+If none load, Adventure and Play fall back to the title files, Closing Night tries play, adventure, then title. After that comes `assets/audio/fair-harvard.mp3` (or `.ogg`), then the procedural pad.
+
+A file that fails to load is remembered as missing for 10 minutes per tab (sessionStorage `pn_bgm_missing_v1`), so it is not requested again on every screen change or reload. The first visit in a tab still logs a few 404s in the console for names that are not there. After adding a track, open a new tab or use `?debug`, which skips this memory.
+
+## Debug mode
+
+Add `?debug` to the URL (`index.html?debug` or `?debug=1`). `?debug=0`, `?debug=false` or `?debug=off` keep it off, and so does a plain `index.html`.
+
+- **Choir Andy** shows as unlocked (shop, hotkey 5, Dictionary) without writing saved progress.
+- **Adventure** map gets a **Debug: next stage** button, and **N** does the same: both jump to the page with the first uncleared stage and focus its node.
+- **Music** skips the remembered missing-file list, so new tracks are picked up right away.
 
 ## First-run tips
 

@@ -1,6 +1,10 @@
 /* Parting Notes — procedural Web Audio SFX + optional repertoire BGM */
 (function (global) {
   const MUTE_KEY = 'parting-notes-mute';
+  // Background music level (0 to 100), set by the Music volume slider next to Mute.
+  const VOLUME_KEY = 'pn_music_volume_v1';
+  let musicVolume = 100;
+  let bgmDucked = false;
 
   let ctx = null;
   let unlocked = false;
@@ -20,9 +24,21 @@
   const MISS_TTL_MS = 10 * 60 * 1000;
   let missedUrls = {};
   let missedSince = 0;
+  // Same rule as PNLevels.isDebug (levels.js loads first): ?debug=0, false or off stays off.
+  function debugOn() {
+    try {
+      if (global.PNLevels && typeof global.PNLevels.isDebug === 'function') return global.PNLevels.isDebug();
+      const q = new URLSearchParams(global.location ? global.location.search : '');
+      if (!q.has('debug')) return false;
+      const v = String(q.get('debug') || '').toLowerCase();
+      return v !== '0' && v !== 'false' && v !== 'off';
+    } catch (_) {
+      return false;
+    }
+  }
   (function loadMisses() {
     try {
-      if (/[?&]debug(?:[=&]|$)/i.test(global.location ? global.location.search : '')) return;
+      if (debugOn()) return;
       const raw = global.sessionStorage.getItem(MISS_KEY);
       if (!raw) return;
       const d = JSON.parse(raw);
@@ -77,6 +93,19 @@
     muted = false;
   }
 
+  function clampVolume(v) {
+    const n = Math.round(Number(v));
+    if (!isFinite(n)) return 100;
+    return Math.max(0, Math.min(100, n));
+  }
+
+  try {
+    const savedVol = localStorage.getItem(VOLUME_KEY);
+    if (savedVol !== null && savedVol !== '') musicVolume = clampVolume(savedVol);
+  } catch (_) {
+    musicVolume = 100;
+  }
+
   function ensureCtx() {
     if (ctx) return ctx;
     const AC = global.AudioContext || global.webkitAudioContext;
@@ -86,7 +115,7 @@
     sfxGain = ctx.createGain();
     bgmGain = ctx.createGain();
     sfxGain.gain.value = 0.55;
-    bgmGain.gain.value = 0.22;
+    bgmGain.gain.value = 0.22 * (musicVolume / 100);
     masterGain.gain.value = muted ? 0 : 1;
     sfxGain.connect(masterGain);
     bgmGain.connect(masterGain);
@@ -101,6 +130,10 @@
       c.resume().catch(function () {});
     }
     unlocked = true;
+    // The title bed is usually loaded before the first gesture, so start it now.
+    if (htmlBgm && bgmMode && !muted && htmlBgm.paused && htmlBgm.src) {
+      htmlBgm.play().catch(function () {});
+    }
     // Soft click so browsers keep the context alive after gesture
     if (!muted) {
       try {
@@ -150,6 +183,7 @@
       localStorage.setItem(MUTE_KEY, muted ? '1' : '0');
     } catch (_) {}
     syncMuteButtons();
+    syncVolumeSliders();
   }
 
   function setMuted(v) {
@@ -171,6 +205,33 @@
       btn.setAttribute('aria-pressed', muted ? 'true' : 'false');
       btn.textContent = muted ? 'Unmute' : 'Mute';
       btn.title = muted ? 'Unmute sound' : 'Mute sound';
+    });
+  }
+
+  function getMusicVolume() {
+    return musicVolume;
+  }
+
+  // Music only (file BGM and procedural pad). Sound effects keep their own level. Mute still
+  // silences everything; unmuting returns to this level.
+  function setMusicVolume(v) {
+    musicVolume = clampVolume(v);
+    applyBgmLevels(bgmDucked);
+    try {
+      localStorage.setItem(VOLUME_KEY, String(musicVolume));
+    } catch (_) {}
+    syncVolumeSliders();
+    return musicVolume;
+  }
+
+  function syncVolumeSliders() {
+    const text = musicVolume + '%' + (muted ? ' (sound muted)' : '');
+    document.querySelectorAll('[data-music-volume]').forEach(function (input) {
+      if (String(input.value) !== String(musicVolume)) input.value = String(musicVolume);
+      input.setAttribute('aria-valuetext', text);
+    });
+    document.querySelectorAll('[data-music-volume-out]').forEach(function (out) {
+      out.textContent = musicVolume + '%';
     });
   }
 
@@ -355,8 +416,10 @@
   }
 
   function applyBgmLevels(duck) {
-    if (bgmGain) bgmGain.gain.value = duck ? 0.1 : 0.2;
-    if (htmlBgm) htmlBgm.volume = duck ? 0.28 : 0.42;
+    bgmDucked = !!duck;
+    const v = musicVolume / 100;
+    if (bgmGain) bgmGain.gain.value = (duck ? 0.1 : 0.2) * v;
+    if (htmlBgm) htmlBgm.volume = (duck ? 0.28 : 0.42) * v;
   }
 
   function sameBgmUrl(url) {
@@ -619,6 +682,9 @@
     setMuted: setMuted,
     isMuted: isMuted,
     syncMuteButtons: syncMuteButtons,
+    setMusicVolume: setMusicVolume,
+    getMusicVolume: getMusicVolume,
+    syncVolumeSliders: syncVolumeSliders,
     play: play,
     place: function () {
       play('place');
@@ -663,8 +729,10 @@
   bindUnlockOnce();
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', syncMuteButtons);
+    document.addEventListener('DOMContentLoaded', syncVolumeSliders);
   } else {
     syncMuteButtons();
+    syncVolumeSliders();
   }
 
   global.PNAudio = PNAudio;

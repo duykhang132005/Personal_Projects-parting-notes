@@ -41,6 +41,12 @@
     } catch (_) {}
   }
 
+  // The Music volume slider uses arrow, Home/End and Page keys itself, so game hotkeys stay quiet
+  // while it has focus (Esc still works).
+  function isVolumeSlider(el) {
+    return !!(el && el.matches && el.matches('[data-music-volume]'));
+  }
+
   function isPlayHelpOpen() {
     const ov = document.getElementById('play-help-overlay');
     return !!(ov && !ov.hidden);
@@ -686,6 +692,15 @@
       });
     });
 
+    document.querySelectorAll('[data-music-volume]').forEach((input) => {
+      input.addEventListener('input', () => {
+        const a = audio();
+        if (a && a.setMusicVolume) a.setMusicVolume(Number(input.value));
+      });
+    });
+    const aVol = audio();
+    if (aVol && aVol.syncVolumeSliders) aVol.syncVolumeSliders();
+
     document.getElementById('btn-tip-next')?.addEventListener('click', () => {
       const a = audio();
       if (a) a.uiClick();
@@ -774,6 +789,7 @@
       document.title += ' (debug)';
       document.addEventListener('keydown', (ev) => {
         if (state.screen !== 'adventure' || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+        if (isVolumeSlider(ev.target)) return;
         if (ev.key === 'n' || ev.key === 'N') PNUI.jumpToNextUncleared();
       });
       console.info('[Parting Notes] debug mode on: Choir Andy unlocked, press N on the map for the next uncleared stage.');
@@ -789,6 +805,7 @@
 
     document.addEventListener('keydown', (ev) => {
       if (state.screen !== 'play') return;
+      if (isVolumeSlider(ev.target) && ev.key !== 'Escape') return;
       if (ev.key === 'Escape') {
         if (isPlayHelpOpen()) {
           closePlayHelp();

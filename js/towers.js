@@ -27,7 +27,7 @@
     alto: {
       id: 'alto',
       name: 'Alto',
-      cost: 85,
+      cost: 75,
       range: 110,
       fireRate: 1.0,
       damage: 6,

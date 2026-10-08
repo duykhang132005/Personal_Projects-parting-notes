@@ -26,7 +26,14 @@
           </button>
         </div>
         <p class="title-credit">Inspired by Harvard Glee Club repertoire · <a href="https://open.spotify.com/playlist/5OHBPowItjFTRPLPkUUiMk" target="_blank" rel="noopener noreferrer">HGC2627 on Spotify</a> (listen-along; in-game uses only files you add)</p>
-        <button type="button" class="mute-btn title-mute" data-mute-btn aria-pressed="false" title="Mute sound">Mute</button>
+        <div class="title-sound">
+          <button type="button" class="mute-btn title-mute" data-mute-btn aria-pressed="false" title="Mute sound">Mute</button>
+          <label class="music-volume title-volume">
+            <span class="music-volume-label" aria-hidden="true">Music</span>
+            <input type="range" class="music-volume-range" data-music-volume min="0" max="100" step="5" value="100" aria-label="Music volume" aria-valuetext="100%" />
+            <output class="music-volume-out" data-music-volume-out aria-hidden="true">100%</output>
+          </label>
+        </div>
       </div>
     </section>
 
@@ -146,6 +153,11 @@
           <button type="button" class="ctrl-btn" id="btn-speed">Speed ×1</button>
           <button type="button" class="ctrl-btn" id="btn-sell" disabled>Sell (50%)</button>
           <button type="button" class="ctrl-btn mute-btn" data-mute-btn aria-pressed="false" title="Mute sound">Mute</button>
+          <label class="music-volume play-volume">
+            <span class="music-volume-label" aria-hidden="true">Music</span>
+            <input type="range" class="music-volume-range" data-music-volume min="0" max="100" step="5" value="100" aria-label="Music volume" aria-valuetext="100%" />
+            <output class="music-volume-out" data-music-volume-out aria-hidden="true">100%</output>
+          </label>
         </div>
 
         <div id="target-panel" class="target-panel" hidden>
@@ -191,7 +203,7 @@
             <canvas class="shop-icon" data-icon="alto" width="64" height="64" aria-hidden="true"></canvas>
             <span class="shop-name">Alto</span>
             <span class="shop-role">Buff · +1g/kill</span>
-            <span class="shop-cost" data-cost="85">85g</span>
+            <span class="shop-cost" data-cost="75">75g</span>
           </button>
           <button type="button" class="shop-btn" data-tower="tenor" title="AoE splash (3)">
             <canvas class="shop-icon" data-icon="tenor" width="64" height="64" aria-hidden="true"></canvas>

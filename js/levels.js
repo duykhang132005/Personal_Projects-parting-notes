@@ -172,7 +172,7 @@
       name: 'Stage Curtain',
       blurb: 'Down the aisle to the stage. Every voice on for the closing number.',
       lives: 12,
-      gold: 135,
+      gold: 120,
       betweenDelay: 3,
       path: [
         [0, 4], [1, 4], [2, 4], [3, 4], [3, 5], [3, 6], [4, 6], [5, 6], [6, 6], [6, 5], [6, 4], [6, 3],
@@ -217,7 +217,7 @@
       name: 'Loading Dock',
       blurb: 'Freight exit behind the hall. Yellow lines, crates, and more jazz swagger.',
       lives: 10,
-      gold: 120,
+      gold: 135,
       betweenDelay: 2.6,
       path: [
         [0, 1], [1, 1], [2, 1], [3, 1], [3, 2], [3, 3], [3, 4], [3, 5], [3, 6], [3, 7],
