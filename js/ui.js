@@ -339,8 +339,9 @@
     }
   }
 
-  // Debug helper: show the page with the first stage that has not been cleared and focus its node.
-  function jumpToNextUncleared() {
+  // Pick the map page with the first stage that has not been cleared (Closing Night when all are
+  // cleared) and highlight that node. Does not render or move keyboard focus.
+  function selectNextUnclearedPage() {
     const progress = PNLevels.loadProgress();
     const all = PNLevels.LEVELS;
     const target = all.find((lv) => !progress.cleared.includes(lv.id)) || all[all.length - 1];
@@ -352,6 +353,13 @@
       }
     }
     adventureFocusId = target.id;
+    return target;
+  }
+
+  // Debug helper: same page choice, then render and focus the node.
+  function jumpToNextUncleared() {
+    const target = selectNextUnclearedPage();
+    if (!target) return null;
     renderAdventure(adventureOnPick || function () {});
     const mapEl = document.getElementById('adv-map');
     const node = mapEl && mapEl.querySelector('[data-level-id="' + target.id + '"]');
@@ -629,6 +637,7 @@
     adventurePageDelta,
     setAdventurePage,
     getAdventurePage,
+    selectNextUnclearedPage,
     jumpToNextUncleared,
     renderDictionary,
     setDictionaryTab,

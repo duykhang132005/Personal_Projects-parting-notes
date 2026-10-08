@@ -11,7 +11,7 @@
     soprano: {
       id: 'soprano',
       name: 'Soprano',
-      cost: 50,
+      cost: 55,
       range: 140,
       fireRate: 0.7,
       damage: 16,

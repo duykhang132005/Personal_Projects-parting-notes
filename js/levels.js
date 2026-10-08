@@ -112,7 +112,7 @@
       name: 'Lawn Approach',
       blurb: 'Cross the grass and sidewalk toward the hall doors. Learn the choir.',
       lives: 20,
-      gold: 125,
+      gold: 130,
       betweenDelay: 5,
       path: [
         [0, 4], [1, 4], [2, 4], [3, 4], [4, 4], [5, 4], [6, 4], [7, 4], [8, 4], [9, 4], [10, 4], [11, 4],
@@ -157,7 +157,7 @@
       name: 'Elevator Bank',
       blurb: 'Up through the elevator lobby. Bring Bass for the long holds.',
       lives: 15,
-      gold: 105,
+      gold: 110,
       betweenDelay: 3.5,
       path: [
         [0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [4, 2], [4, 3], [4, 4], [4, 5], [4, 6], [4, 7], [4, 8],
@@ -187,7 +187,7 @@
       name: 'Encore Call',
       blurb: 'They want one more number. Jazz notes shimmer in — they shrug off heavy hits.',
       lives: 12,
-      gold: 130,
+      gold: 135,
       betweenDelay: 3,
       path: [
         [0, 3], [1, 3], [2, 3], [3, 3], [3, 4], [3, 5], [3, 6], [4, 6], [5, 6], [6, 6], [7, 6],
@@ -202,7 +202,7 @@
       name: 'Green Room Crush',
       blurb: 'Dressing-room chaos. Racks, mirrors, and glittery jazz notes in the crush.',
       lives: 11,
-      gold: 125,
+      gold: 130,
       betweenDelay: 2.8,
       path: [
         [0, 6], [1, 6], [2, 6], [2, 5], [2, 4], [2, 3], [2, 2], [3, 2], [4, 2], [5, 2], [5, 3], [5, 4],
@@ -217,7 +217,7 @@
       name: 'Loading Dock',
       blurb: 'Freight exit behind the hall. Yellow lines, crates, and more jazz swagger.',
       lives: 10,
-      gold: 135,
+      gold: 140,
       betweenDelay: 2.6,
       path: [
         [0, 1], [1, 1], [2, 1], [3, 1], [3, 2], [3, 3], [3, 4], [3, 5], [3, 6], [3, 7],

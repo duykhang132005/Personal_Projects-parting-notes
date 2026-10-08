@@ -178,7 +178,9 @@
     requestAnimationFrame(() => PNUI.paintTitleArt());
   }
 
-  function goAdventure() {
+  // keepPage: coming back from the Dictionary keeps the page the player was on. Otherwise the map
+  // opens on the page with the next uncleared stage (highlighted, without moving focus).
+  function goAdventure(keepPage) {
     closePlayHelp();
     state.screen = 'adventure';
     state.paused = true;
@@ -186,6 +188,7 @@
     PNUI.showScreen('adventure');
     const a = audio();
     if (a && a.bgmStart) a.bgmStart('adventure');
+    if (keepPage !== true && PNUI.selectNextUnclearedPage) PNUI.selectNextUnclearedPage();
     PNUI.renderAdventure(startLevel);
   }
 
@@ -203,7 +206,7 @@
   }
 
   function leaveDictionary() {
-    if (dictReturn === 'adventure') goAdventure();
+    if (dictReturn === 'adventure') goAdventure(true);
     else goTitle();
   }
 

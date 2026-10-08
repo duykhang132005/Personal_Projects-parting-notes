@@ -1,24 +1,27 @@
-﻿# Repertoire BGM (drop legal tracks here)
+# Repertoire BGM (drop legal tracks here)
 
-In-game music only uses files you place in this folder (or `../fair-harvard.mp3`).
+In-game music only uses files you place in this folder (or `../fair-harvard.mp3`). Only public-domain tracks or your own recordings belong here.
 Do **not** rip Spotify. The HGC2627 playlist is inspiration / listen-along only:
 https://open.spotify.com/playlist/5OHBPowItjFTRPLPkUUiMk
 
-## Suggested mapping (when you have rights to a recording)
+Modern commercial recordings (e.g. Billie Eilish cover) need explicit license, so skip those for a shippable build.
 
-| Mood / screen | Playlist pieces (inspiration) | Suggested filename |
+## Exact filenames
+
+Browsers cannot list folders, so `js/audio.js` tries a fixed list (`BGM_CANDIDATES`) in order and plays the first file that loads. Only these names are tried. Any other file (e.g. `title-02.mp3` or `title-intro.mp3`) is ignored until it is added to that list.
+
+| Bed (screen) | Files tried, in order | Playlist inspiration |
 |---|---|---|
-| Title / warm | Fair Harvard (already at `../fair-harvard.mp3`), Glorious Apollo | `title-*.mp3` or `glorious-apollo.mp3` |
-| Adventure map | Abendlied, O vos omnes, Holy Holy, Shen Khar Venakhi | `adventure-*.mp3` |
-| Play (ducked) | Harvard Football Songs, Drunken Sailor (arr.), Chanson à boire | `play-*.mp3` |
-| Closing / solemn | Come Ye Disconsolate, O quam mirabilis, Gesang der Mönche | `closing-*.mp3` |
+| Title (title, Dictionary, congrats) | `title-01.mp3`, `title-01.ogg`, `glorious-apollo.mp3` | Fair Harvard (already at `../fair-harvard.mp3`), Glorious Apollo |
+| Adventure map | `adventure-01.mp3`, `adventure-01.ogg`, `abendlied.mp3`, `o-vos-omnes.mp3` | Abendlied, O vos omnes |
+| Play (stages 1 to 9, ducked) | `play-01.mp3`, `play-01.ogg`, `football-songs.mp3` | Harvard Football Songs |
+| Closing Night | `closing-01.mp3`, `closing-01.ogg`, `come-ye-disconsolate.mp3` | Come Ye Disconsolate |
 
-Modern commercial recordings (e.g. Billie Eilish cover) need explicit license — skip those for a shippable build.
+## Fallback order
 
-## How loading works
-`js/audio.js` probes:
-1. `assets/audio/repertoire/*.mp3` (and `.ogg`) matching prefixes `title-`, `adventure-`, `play-`, `closing-`
-2. Falls back to `assets/audio/fair-harvard.mp3`
-3. Falls back to procedural pad
+1. The bed's own files above.
+2. Adventure and Play: the Title files. Closing Night: the Play, Adventure, then Title files.
+3. `../fair-harvard.mp3`, then `../fair-harvard.ogg`.
+4. The procedural pad.
 
-Mute still silences BGM + SFX.
+A file that fails to load is remembered as missing for 10 minutes per tab (sessionStorage `pn_bgm_missing_v1`). After adding a track, open a new tab or add `?debug` to the URL, which skips this memory. Mute still silences BGM + SFX.
