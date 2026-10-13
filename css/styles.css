@@ -1167,6 +1167,24 @@ kbd {
 .play-volume:hover {
   border-color: var(--accent);
 }
+/* Music and Effects sliders stacked as one compact block */
+.volume-stack {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.volume-stack .music-volume {
+  font-size: 0.82rem;
+}
+.volume-stack .title-volume,
+.volume-stack .play-volume {
+  padding-top: 0.1rem;
+  padding-bottom: 0.1rem;
+}
+.music-volume-label {
+  min-width: 3.3rem;
+  text-align: left;
+}
 
 /* —— First-run onboarding —— */
 .onboard-overlay {
@@ -1401,6 +1419,21 @@ kbd {
 }
 
 .adv-node.cleared .adv-node-state { color: #3d6b2e; }
+.adv-node-stat {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: #5a4a3a;
+  line-height: 1.2;
+}
+.adv-node.endless .adv-node-orb {
+  font-size: 1.25rem;
+}
+.adv-detail-text .adv-detail-stats {
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #5a4a3a;
+}
 .adv-node.locked .adv-node-state { color: #6a655c; }
 
 .adv-detail {

@@ -34,6 +34,10 @@ Per-tower targeting: Front / Back / Closest / Highest HP.
 | Jazz | Glittery; each hit capped (~10 dmg) |
 | Folk | Brown; immune to hits below ~20 dmg |
 
+**Encore (endless):** unlocks with Choir Andy (clear Closing Night, or `?debug`). It sits after Closing Night on the last map page and replays that map with waves that grow forever: more notes, more HP and a little more gold each wave, with Andy Clark every 10th wave. The run ends at 0 lives and shows waves survived and your best (saved as `pn_encore_best_v1`). It never changes stage progress.
+
+**Stage stats:** each map node shows a short readout (e.g. "Best 18 lives") and the detail panel lists clears, losses, best lives left and the last losing wave. Saved separately from progress as `pn_stage_stats_v1`. Retrying or quitting to the map counts as neither a clear nor a loss.
+
 **Boss:** Andy Clark (Closing Night) — conductor who periodically stuns all towers. Clear the stage to recruit **Choir Andy** for the shop.
 
 ## Stack
@@ -45,6 +49,7 @@ Vanilla HTML, CSS, and JS. MIT — see [LICENSE](LICENSE).
 - **SFX:** procedural Web Audio (`js/audio.js`).
 - **BGM:** continuous across screens; prefers legal files in `assets/audio/repertoire/`, then `fair-harvard.mp3`, then a soft procedural pad. Same track does not restart on navigation.
 - Mute persists as `parting-notes-mute`.
+- **Effects volume** slider (0 to 100) sits under Music and scales every sound effect, with a short preview click. Saved as `pn_sfx_volume_v1`.
 - **Music volume** slider (0 to 100) sits next to Mute on the title and play screens and only changes music, not SFX. Saved as `pn_music_volume_v1`. Mute still silences everything; unmute returns to the slider level. Game hotkeys (except Esc) are ignored while the slider has focus.
 - Spotify HGC2627 is listen-along / credit only — do not rip streams into the build. See `assets/audio/README.md`.
 
@@ -70,6 +75,8 @@ Add `?debug` to the URL (`index.html?debug` or `?debug=1`). `?debug=0`, `?debug=
 - **Choir Andy** shows as unlocked (shop, hotkey 5, Dictionary) without writing saved progress.
 - **Adventure** map gets a **Debug: next stage** button, and **N** does the same: both jump to the page with the first uncleared stage and focus its node.
 - **Music** skips the remembered missing-file list, so new tracks are picked up right away.
+- **Encore (endless)** is open without clearing Closing Night.
+- **Stats** and the Encore best are read but never written, so test runs do not skew them. A **Debug: reset stats** button clears both (progress is kept).
 
 ## First-run tips
 

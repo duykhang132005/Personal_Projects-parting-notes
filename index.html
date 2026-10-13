@@ -28,11 +28,18 @@
         <p class="title-credit">Inspired by Harvard Glee Club repertoire · <a href="https://open.spotify.com/playlist/5OHBPowItjFTRPLPkUUiMk" target="_blank" rel="noopener noreferrer">HGC2627 on Spotify</a> (listen-along; in-game uses only files you add)</p>
         <div class="title-sound">
           <button type="button" class="mute-btn title-mute" data-mute-btn aria-pressed="false" title="Mute sound">Mute</button>
-          <label class="music-volume title-volume">
-            <span class="music-volume-label" aria-hidden="true">Music</span>
-            <input type="range" class="music-volume-range" data-music-volume min="0" max="100" step="5" value="100" aria-label="Music volume" aria-valuetext="100%" />
-            <output class="music-volume-out" data-music-volume-out aria-hidden="true">100%</output>
-          </label>
+          <div class="volume-stack">
+            <label class="music-volume title-volume">
+              <span class="music-volume-label" aria-hidden="true">Music</span>
+              <input type="range" class="music-volume-range" data-music-volume min="0" max="100" step="5" value="100" aria-label="Music volume" aria-valuetext="100%" />
+              <output class="music-volume-out" data-music-volume-out aria-hidden="true">100%</output>
+            </label>
+            <label class="music-volume title-volume">
+              <span class="music-volume-label" aria-hidden="true">Effects</span>
+              <input type="range" class="music-volume-range" data-sfx-volume min="0" max="100" step="5" value="100" aria-label="Sound effects volume" aria-valuetext="100%" />
+              <output class="music-volume-out" data-sfx-volume-out aria-hidden="true">100%</output>
+            </label>
+          </div>
         </div>
       </div>
     </section>
@@ -56,6 +63,7 @@
             <div class="adv-detail-text">
               <h3 id="adv-detail-name">Choose a stage</h3>
               <p id="adv-detail-blurb">Hover or focus a node along the path into the hall.</p>
+              <p id="adv-detail-stats" class="adv-detail-stats" hidden></p>
             </div>
             <span class="adv-detail-meta" id="adv-detail-meta"></span>
           </div>
@@ -153,11 +161,18 @@
           <button type="button" class="ctrl-btn" id="btn-speed">Speed ×1</button>
           <button type="button" class="ctrl-btn" id="btn-sell" disabled>Sell (50%)</button>
           <button type="button" class="ctrl-btn mute-btn" data-mute-btn aria-pressed="false" title="Mute sound">Mute</button>
-          <label class="music-volume play-volume">
-            <span class="music-volume-label" aria-hidden="true">Music</span>
-            <input type="range" class="music-volume-range" data-music-volume min="0" max="100" step="5" value="100" aria-label="Music volume" aria-valuetext="100%" />
-            <output class="music-volume-out" data-music-volume-out aria-hidden="true">100%</output>
-          </label>
+          <div class="volume-stack">
+            <label class="music-volume play-volume">
+              <span class="music-volume-label" aria-hidden="true">Music</span>
+              <input type="range" class="music-volume-range" data-music-volume min="0" max="100" step="5" value="100" aria-label="Music volume" aria-valuetext="100%" />
+              <output class="music-volume-out" data-music-volume-out aria-hidden="true">100%</output>
+            </label>
+            <label class="music-volume play-volume">
+              <span class="music-volume-label" aria-hidden="true">Effects</span>
+              <input type="range" class="music-volume-range" data-sfx-volume min="0" max="100" step="5" value="100" aria-label="Sound effects volume" aria-valuetext="100%" />
+              <output class="music-volume-out" data-sfx-volume-out aria-hidden="true">100%</output>
+            </label>
+          </div>
         </div>
 
         <div id="target-panel" class="target-panel" hidden>
@@ -312,6 +327,7 @@
   <script src="js/projectiles.js"></script>
   <script src="js/towers.js"></script>
   <script src="js/waves.js"></script>
+  <script src="js/stats.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/main.js"></script>

@@ -260,8 +260,70 @@
     },
   ];
 
+  // Encore (endless): unlocked with Choir Andy (Closing Night cleared, or ?debug). It is not in
+  // LEVELS, so it never touches progress, map paging, transitions or the congrats screen.
+  // Wave n (1-based) reuses the Closing Night templates without the boss, cycling every 10 waves:
+  //   count  = round(base count * (1 + countPerWave * (n - 1)))
+  //   HP     = base HP * hpGrowth ^ (n - 1)
+  //   gold   = base kill gold * (1 + goldPerWave * (n - 1))
+  //   gap    = max(minGap, base gap * (1 - gapPerWave * (n - 1)))
+  // Every 10th wave adds Andy Clark (same HP growth). There is no last wave.
+  const ENDLESS_TUNING = {
+    hpGrowth: 1.11,
+    countPerWave: 0.03,
+    goldPerWave: 0.02,
+    gapPerWave: 0.01,
+    minGap: 0.28,
+    bossEvery: 10,
+  };
+  const ENDLESS_BASE = WAVE_FINALE_MIX.map((w) => ({
+    spawnGap: w.spawnGap,
+    entries: w.entries.filter((e) => e.type !== 'andy'),
+  }));
+
+  function endlessWave(index) {
+    const i = Math.max(0, Math.floor(index));
+    const t = ENDLESS_TUNING;
+    const base = ENDLESS_BASE[i % ENDLESS_BASE.length];
+    const hpMult = Math.pow(t.hpGrowth, i);
+    const goldMult = 1 + t.goldPerWave * i;
+    const countMult = 1 + t.countPerWave * i;
+    const entries = base.entries.map((e) => ({
+      type: e.type,
+      style: e.style || 'normal',
+      count: Math.max(1, Math.round(e.count * countMult)),
+      hpMult,
+      goldMult,
+    }));
+    if ((i + 1) % t.bossEvery === 0) {
+      entries.unshift({ type: 'andy', style: 'normal', count: 1, hpMult, goldMult });
+    }
+    return {
+      spawnGap: Math.max(t.minGap, (base.spawnGap || 0.5) * (1 - t.gapPerWave * i)),
+      entries,
+    };
+  }
+
+  const closingDef = LEVELS[LEVELS.length - 1];
+  const ENDLESS_LEVEL = {
+    id: 'endless',
+    endless: true,
+    // Same index as Closing Night so it reuses that map theme and the closing music bed.
+    index: closingDef.index,
+    name: 'Encore (endless)',
+    blurb: 'Closing Night, again and again. Waves grow without end and Andy Clark returns every 10th wave.',
+    lives: 20,
+    gold: 180,
+    betweenDelay: 3,
+    path: closingDef.path,
+    blocks: closingDef.blocks,
+    waves: [],
+    generateWave: endlessWave,
+  };
+
   function getLevel(idOrIndex) {
     if (typeof idOrIndex === 'number') return LEVELS[idOrIndex] || null;
+    if (idOrIndex === ENDLESS_LEVEL.id) return ENDLESS_LEVEL;
     return LEVELS.find((l) => l.id === idOrIndex) || null;
   }
 
@@ -357,9 +419,15 @@
     return isTowerUnlocked('andy');
   }
 
+  function isEndlessUnlocked() {
+    if (DEBUG) return true;
+    const p = loadProgress();
+    return p.cleared.includes('closing');
+  }
+
   function getNextLevel(idOrIndex) {
     const cur = getLevel(idOrIndex);
-    if (!cur) return null;
+    if (!cur || cur.endless) return null;
     return LEVELS[cur.index + 1] || null;
   }
 
@@ -378,5 +446,9 @@
     isTowerUnlocked,
     hasUnlockedAndy,
     isDebug,
+    ENDLESS_LEVEL,
+    ENDLESS_TUNING,
+    endlessWave,
+    isEndlessUnlocked,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

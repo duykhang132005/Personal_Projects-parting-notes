@@ -5,6 +5,12 @@
   const VOLUME_KEY = 'pn_music_volume_v1';
   let musicVolume = 100;
   let bgmDucked = false;
+  // Sound effects level (0 to 100), set by the Sound effects volume slider. Scales sfxGain, which
+  // every SFX path (tone, noiseBurst, the unlock click) goes through.
+  const SFX_VOLUME_KEY = 'pn_sfx_volume_v1';
+  const SFX_BASE_GAIN = 0.55;
+  let sfxVolume = 100;
+  let lastSfxPreview = 0;
 
   let ctx = null;
   let unlocked = false;
@@ -106,6 +112,13 @@
     musicVolume = 100;
   }
 
+  try {
+    const savedSfx = localStorage.getItem(SFX_VOLUME_KEY);
+    if (savedSfx !== null && savedSfx !== '') sfxVolume = clampVolume(savedSfx);
+  } catch (_) {
+    sfxVolume = 100;
+  }
+
   function ensureCtx() {
     if (ctx) return ctx;
     const AC = global.AudioContext || global.webkitAudioContext;
@@ -114,7 +127,7 @@
     masterGain = ctx.createGain();
     sfxGain = ctx.createGain();
     bgmGain = ctx.createGain();
-    sfxGain.gain.value = 0.55;
+    sfxGain.gain.value = SFX_BASE_GAIN * (sfxVolume / 100);
     bgmGain.gain.value = 0.22 * (musicVolume / 100);
     masterGain.gain.value = muted ? 0 : 1;
     sfxGain.connect(masterGain);
@@ -224,15 +237,44 @@
     return musicVolume;
   }
 
-  function syncVolumeSliders() {
-    const text = musicVolume + '%' + (muted ? ' (sound muted)' : '');
-    document.querySelectorAll('[data-music-volume]').forEach(function (input) {
-      if (String(input.value) !== String(musicVolume)) input.value = String(musicVolume);
+  function getSfxVolume() {
+    return sfxVolume;
+  }
+
+  // Sound effects only. preview plays a short click (at most every 120 ms) so the player hears
+  // the new level; it stays silent while muted.
+  function setSfxVolume(v, preview) {
+    sfxVolume = clampVolume(v);
+    if (sfxGain) sfxGain.gain.value = SFX_BASE_GAIN * (sfxVolume / 100);
+    try {
+      localStorage.setItem(SFX_VOLUME_KEY, String(sfxVolume));
+    } catch (_) {}
+    syncVolumeSliders();
+    if (preview) {
+      const now = Date.now();
+      if (now - lastSfxPreview >= 120) {
+        lastSfxPreview = now;
+        if (!unlocked) unlock();
+        tone(640, 0.05, 'sine', 0.12);
+      }
+    }
+    return sfxVolume;
+  }
+
+  function syncSliderSet(selector, outSelector, value) {
+    const text = value + '%' + (muted ? ' (sound muted)' : '');
+    document.querySelectorAll(selector).forEach(function (input) {
+      if (String(input.value) !== String(value)) input.value = String(value);
       input.setAttribute('aria-valuetext', text);
     });
-    document.querySelectorAll('[data-music-volume-out]').forEach(function (out) {
-      out.textContent = musicVolume + '%';
+    document.querySelectorAll(outSelector).forEach(function (out) {
+      out.textContent = value + '%';
     });
+  }
+
+  function syncVolumeSliders() {
+    syncSliderSet('[data-music-volume]', '[data-music-volume-out]', musicVolume);
+    syncSliderSet('[data-sfx-volume]', '[data-sfx-volume-out]', sfxVolume);
   }
 
   function envGain(duration, peak, attack, release) {
@@ -685,6 +727,8 @@
     setMusicVolume: setMusicVolume,
     getMusicVolume: getMusicVolume,
     syncVolumeSliders: syncVolumeSliders,
+    setSfxVolume: setSfxVolume,
+    getSfxVolume: getSfxVolume,
     play: play,
     place: function () {
       play('place');

@@ -14,7 +14,12 @@
     const phase = document.querySelector('[data-hud="phase"]');
     if (lives) lives.textContent = 'Lives: ' + state.lives;
     if (gold) gold.textContent = 'Gold: ' + state.gold;
-    if (wave && director) {
+    if (wave && director && director.endless) {
+      const best = global.PNStats ? PNStats.getEncoreBest() : 0;
+      wave.textContent =
+        'Encore wave ' + (director.started ? director.currentDisplay() : 0) +
+        (best > 0 ? ' (best ' + best + ')' : '');
+    } else if (wave && director) {
       const total = director.totalWaves();
       const cur = director.currentDisplay();
       if (!director.started) wave.textContent = 'Wave: — / ' + total;
@@ -207,10 +212,37 @@
     return adventureMapPage;
   }
 
+  // Stats line under the blurb in the detail panel.
+  function stageStatsText(level, unlocked) {
+    if (!level || !global.PNStats) return '';
+    if (level.endless) {
+      if (!unlocked) return 'Clear Closing Night to unlock endless waves.';
+      const best = PNStats.getEncoreBest();
+      return best > 0 ? 'Best run: ' + best + (best === 1 ? ' wave survived.' : ' waves survived.') : 'No Encore runs recorded yet.';
+    }
+    return PNStats.detailText(PNStats.get(level.id));
+  }
+
+  // Short readout on a map node (part of the node's accessible name).
+  function stageNodeSummary(level, unlocked) {
+    if (!level || !global.PNStats) return '';
+    if (level.endless) {
+      const best = unlocked ? PNStats.getEncoreBest() : 0;
+      return best > 0 ? 'Best ' + best + (best === 1 ? ' wave' : ' waves') : '';
+    }
+    return PNStats.nodeSummary(PNStats.get(level.id));
+  }
+
   function updateAdventureDetail(level, unlocked, cleared) {
     const nameEl = document.getElementById('adv-detail-name');
     const blurbEl = document.getElementById('adv-detail-blurb');
     const metaEl = document.getElementById('adv-detail-meta');
+    const statsEl = document.getElementById('adv-detail-stats');
+    if (statsEl) {
+      const st = stageStatsText(level, unlocked);
+      statsEl.textContent = st;
+      statsEl.hidden = !st;
+    }
     if (!level) {
       if (nameEl) nameEl.textContent = 'Choose a stage';
       if (blurbEl) {
@@ -222,7 +254,7 @@
     if (nameEl) nameEl.textContent = level.name;
     if (blurbEl) blurbEl.textContent = level.blurb || '';
     if (metaEl) {
-      metaEl.textContent = !unlocked ? 'Locked' : cleared ? 'Cleared' : 'Ready';
+      metaEl.textContent = !unlocked ? 'Locked' : level.endless ? 'Endless' : cleared ? 'Cleared' : 'Ready';
     }
   }
 
@@ -246,6 +278,10 @@
     const levels = page.indices
       .map((i) => PNLevels.LEVELS[i])
       .filter(Boolean);
+    // Encore (endless) sits after Closing Night on the last page, teased until unlocked.
+    if (adventureMapPage === MAP_PAGES.length - 1 && PNLevels.ENDLESS_LEVEL) {
+      levels.push(PNLevels.ENDLESS_LEVEL);
+    }
 
     mapEl.innerHTML = '';
     const svgNS = 'http://www.w3.org/2000/svg';
@@ -279,12 +315,16 @@
     let focusCleared = false;
 
     levels.forEach((level) => {
-      const unlocked = level.index < progress.unlocked;
-      const cleared = progress.cleared.includes(level.id);
+      const unlocked = level.endless
+        ? !!(PNLevels.isEndlessUnlocked && PNLevels.isEndlessUnlocked())
+        : level.index < progress.unlocked;
+      const cleared = !level.endless && progress.cleared.includes(level.id);
+      const summary = stageNodeSummary(level, unlocked);
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className =
         'adv-node' +
+        (level.endless ? ' endless' : '') +
         (cleared ? ' cleared' : '') +
         (!unlocked ? ' locked' : '');
       btn.disabled = !unlocked;
@@ -292,12 +332,13 @@
       btn.dataset.levelId = level.id;
       btn.innerHTML =
         '<span class="adv-node-orb">' +
-        (level.index + 1) +
+        (level.endless ? '<span aria-hidden="true">∞</span>' : level.index + 1) +
         '</span><span class="adv-node-name">' +
         level.name +
         '</span><span class="adv-node-state">' +
-        (!unlocked ? 'Locked' : cleared ? 'Cleared' : 'Open') +
-        '</span>';
+        (!unlocked ? 'Locked' : level.endless ? 'Endless' : cleared ? 'Cleared' : 'Open') +
+        '</span>' +
+        (summary ? '<span class="adv-node-stat">' + summary + '</span>' : '');
 
       const focusThis = () => {
         adventureFocusId = level.id;
@@ -314,7 +355,7 @@
         });
       }
 
-      if (adventureFocusId === level.id || (!focusLevel && unlocked)) {
+      if (adventureFocusId === level.id || (!focusLevel && unlocked && !level.endless)) {
         focusLevel = level;
         focusUnlocked = unlocked;
         focusCleared = cleared;
@@ -561,7 +602,7 @@
         andy.hp +
         ' · leaks 5 lives</p>' +
         '</div></div>' +
-        '<p class="dict-body">Conductor boss. His cue periodically <strong>stuns the choir</strong>. If he reaches the end he leaks <strong>5 lives</strong> — stop him before the house empties.</p>' +
+        '<p class="dict-body">Conductor boss. His cue periodically <strong>stuns the choir</strong>. If he reaches the end he leaks <strong>5 lives</strong>, so stop him before the house empties. Beat Closing Night to open <strong>Encore (endless)</strong>, where he returns every 10th wave.</p>' +
         '</article>';
     }
     return html;

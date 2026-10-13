@@ -41,10 +41,10 @@
     } catch (_) {}
   }
 
-  // The Music volume slider uses arrow, Home/End and Page keys itself, so game hotkeys stay quiet
-  // while it has focus (Esc still works).
+  // The Music and Effects volume sliders use arrow, Home/End and Page keys themselves, so game
+  // hotkeys stay quiet while either has focus (Esc still works).
   function isVolumeSlider(el) {
-    return !!(el && el.matches && el.matches('[data-music-volume]'));
+    return !!(el && el.matches && el.matches('[data-music-volume], [data-sfx-volume]'));
   }
 
   function isPlayHelpOpen() {
@@ -267,6 +267,7 @@
     canvas.height = map.height;
     director = PNWaves.createDirector(level.waves, {
       betweenDelay: level.betweenDelay || 5,
+      generate: level.endless ? level.generateWave : null,
     });
 
     state.screen = 'play';
@@ -319,7 +320,35 @@
       typeId = spawn.type || 'quarter';
       style = spawn.style || 'normal';
     }
-    state.enemies.push(PNEnemies.createEnemy(typeId, map.waypoints, style));
+    const enemy = PNEnemies.createEnemy(typeId, map.waypoints, style);
+    // Encore (endless) waves scale HP and kill gold per wave.
+    if (spawn && typeof spawn === 'object') {
+      if (spawn.hpMult && spawn.hpMult !== 1) {
+        enemy.maxHp = Math.max(1, Math.round(enemy.maxHp * spawn.hpMult));
+        enemy.hp = enemy.maxHp;
+      }
+      if (spawn.goldMult && spawn.goldMult !== 1) {
+        enemy.gold = Math.max(1, Math.round((enemy.gold || 0) * spawn.goldMult));
+      }
+    }
+    state.enemies.push(enemy);
+  }
+
+  function isEndlessRun() {
+    return !!(currentLevel && currentLevel.endless);
+  }
+
+  // Encore (endless) game over: results with waves survived and the best run.
+  function endEndlessRun() {
+    const survived = director ? director.wavesCleared() : 0;
+    const newBest = PNStats.submitEncoreWaves(survived);
+    const best = Math.max(PNStats.getEncoreBest(), survived);
+    state.message =
+      'You held the stage for ' + survived + (survived === 1 ? ' wave' : ' waves') + '. ' +
+      (newBest ? 'New best!' : 'Best: ' + best + (best === 1 ? ' wave.' : ' waves.'));
+    showEnd('Encore over', state.message);
+    const a = audio();
+    if (a) a.lose();
   }
 
   /** Gold bonus from living Altos (Articulate raises goldPerKill). */
@@ -701,6 +730,12 @@
         if (a && a.setMusicVolume) a.setMusicVolume(Number(input.value));
       });
     });
+    document.querySelectorAll('[data-sfx-volume]').forEach((input) => {
+      input.addEventListener('input', () => {
+        const a = audio();
+        if (a && a.setSfxVolume) a.setSfxVolume(Number(input.value), true);
+      });
+    });
     const aVol = audio();
     if (aVol && aVol.syncVolumeSliders) aVol.syncVolumeSliders();
 
@@ -788,6 +823,19 @@
         dbg.textContent = 'Debug: next stage';
         dbg.addEventListener('click', () => PNUI.jumpToNextUncleared());
         bar.appendChild(dbg);
+        // Debug runs never write stats; this clears real stats and the Encore best on request.
+        const reset = document.createElement('button');
+        reset.type = 'button';
+        reset.className = 'ctrl-btn';
+        reset.id = 'btn-adv-debug-reset-stats';
+        reset.textContent = 'Debug: reset stats';
+        reset.title = 'Debug: clear stage stats and the Encore best (progress is kept)';
+        reset.addEventListener('click', () => {
+          if (!window.confirm('Clear all stage stats and the Encore best? Progress is kept.')) return;
+          PNStats.resetAll();
+          PNUI.renderAdventure(startLevel);
+        });
+        bar.appendChild(reset);
       }
       document.title += ' (debug)';
       document.addEventListener('keydown', (ev) => {
@@ -853,12 +901,15 @@
     const scaled = dt * state.speed;
     const dir = director.update(scaled, livingEnemies().length);
     if (dir.spawned) spawnNote(dir.spawned);
+    // Save the Encore best as each wave is cleared, so quitting mid-run keeps it.
+    if (dir.waveClear && isEndlessRun() && window.PNStats) PNStats.submitEncoreWaves(director.wavesCleared());
     if (dir.victory) {
       state.status = 'won';
       state.message = currentLevel
         ? currentLevel.name + ' cleared!'
         : 'The phrase is broken.';
       if (currentLevel) PNLevels.markCleared(currentLevel.id);
+      if (currentLevel && window.PNStats) PNStats.recordWin(currentLevel.id, state.lives);
       // Final stage → full congratulations screen
       if (currentLevel && (currentLevel.id === 'closing' || currentLevel.index === 9)) {
         goCongrats();
@@ -879,12 +930,17 @@
         state.lives = Math.max(0, state.lives - leak);
         const a = audio();
         if (a) a.lifeLeak();
-        if (state.lives <= 0) {
+        if (state.lives <= 0 && state.status === 'playing') {
           state.status = 'lost';
-          state.message = e.isBoss
-            ? 'Andy Clark took the podium.'
-            : 'The notes reached the stage.';
-          showEnd('Defeat', state.message);
+          if (isEndlessRun()) {
+            endEndlessRun();
+          } else {
+            if (currentLevel && window.PNStats) PNStats.recordLoss(currentLevel.id, director.currentDisplay());
+            state.message = e.isBoss
+              ? 'Andy Clark took the podium.'
+              : 'The notes reached the stage.';
+            showEnd('Defeat', state.message);
+          }
         }
       }
       // Conductor cue: stronger 0.4s wind-up flash + stun

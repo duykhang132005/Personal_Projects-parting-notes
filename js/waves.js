@@ -5,7 +5,10 @@
     (wave.entries || []).forEach((entry) => {
       const style = entry.style || 'normal';
       for (let i = 0; i < entry.count; i++) {
-        list.push({ type: entry.type, style });
+        const spawn = { type: entry.type, style };
+        if (entry.hpMult) spawn.hpMult = entry.hpMult;
+        if (entry.goldMult) spawn.goldMult = entry.goldMult;
+        list.push(spawn);
       }
     });
     return list;
@@ -14,6 +17,8 @@
   function createDirector(waveList, opts) {
     const WAVES = waveList && waveList.length ? waveList : [];
     const betweenDelay = (opts && opts.betweenDelay) || 5;
+    // Endless mode: opts.generate(index) builds each wave on demand and there is no victory.
+    const generate = opts && typeof opts.generate === 'function' ? opts.generate : null;
 
     return {
       waveIndex: 0,
@@ -25,19 +30,26 @@
       phase: 'ready',
       started: false,
       waves: WAVES,
+      endless: !!generate,
 
       totalWaves() {
-        return this.waves.length;
+        return generate ? Infinity : this.waves.length;
       },
 
       currentDisplay() {
         if (!this.started) return 0;
+        if (generate) return this.waveIndex + 1;
         return Math.min(this.waveIndex + 1, this.waves.length);
+      },
+
+      /** Waves fully cleared so far (endless results). */
+      wavesCleared() {
+        return this.waveIndex;
       },
 
       begin() {
         if (this.phase !== 'ready' && this.phase !== 'between') return false;
-        if (!this.waves.length) return false;
+        if (!generate && !this.waves.length) return false;
         this.started = true;
         this._loadWave(this.waveIndex);
         this.phase = 'spawning';
@@ -52,7 +64,7 @@
       },
 
       _loadWave(index) {
-        const wave = this.waves[index];
+        const wave = generate ? generate(index) : this.waves[index];
         this.queue = flattenWave(wave);
         this.spawnGap = wave.spawnGap || 0.7;
         this.spawnTimer = 0;
@@ -67,7 +79,7 @@
             out.spawned = this.queue.shift();
           }
           if (!this.queue.length && livingCount === 0) {
-            if (this.waveIndex >= this.waves.length - 1) {
+            if (!generate && this.waveIndex >= this.waves.length - 1) {
               this.phase = 'won';
               out.victory = true;
             } else {
