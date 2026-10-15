@@ -254,6 +254,12 @@ html, body {
   margin-bottom: 0.85rem;
 }
 
+.play-help-hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
 .play-help-stats {
   display: flex;
   flex-wrap: wrap;

@@ -227,8 +227,10 @@
   function stageNodeSummary(level, unlocked) {
     if (!level || !global.PNStats) return '';
     if (level.endless) {
-      const best = unlocked ? PNStats.getEncoreBest() : 0;
-      return best > 0 ? 'Best ' + best + (best === 1 ? ' wave' : ' waves') : '';
+      // Locked: no readout. Unlocked: best wave from pn_encore_best_v1, or a placeholder.
+      if (!unlocked) return '';
+      const best = PNStats.getEncoreBest();
+      return best > 0 ? 'Best: wave ' + best : 'No best yet';
     }
     return PNStats.nodeSummary(PNStats.get(level.id));
   }
