@@ -254,6 +254,36 @@ html, body {
   margin-bottom: 0.85rem;
 }
 
+.play-help-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.9rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--panel-edge);
+}
+
+.help-reset-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+.help-reset-confirm[hidden] { display: none !important; }
+
+.help-reset-danger {
+  border-color: #b3402e;
+}
+
+.help-reset-status {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.help-reset-status:empty { display: none; }
+
 .play-help-header h2 {
   margin: 0;
   font-size: 1.35rem;

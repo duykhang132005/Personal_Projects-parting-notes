@@ -287,6 +287,15 @@
               </ul>
             </section>
           </div>
+          <div class="play-help-stats" id="help-stats">
+            <button type="button" class="ctrl-btn" id="btn-help-reset-stats">Reset stats</button>
+            <div class="help-reset-confirm" id="help-reset-confirm" role="group" aria-labelledby="help-reset-q" hidden>
+              <span id="help-reset-q">Clear stage stats and the Encore best? Progress, unlocks and volume are kept.</span>
+              <button type="button" class="ctrl-btn help-reset-danger" id="btn-help-reset-confirm">Confirm reset</button>
+              <button type="button" class="ctrl-btn" id="btn-help-reset-cancel">Cancel</button>
+            </div>
+            <p class="help-reset-status" id="help-reset-status" role="status" aria-live="polite"></p>
+          </div>
         </div>
       </div>
     </section>

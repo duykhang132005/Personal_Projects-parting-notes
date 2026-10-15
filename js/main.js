@@ -54,6 +54,8 @@
 
   // Where keyboard focus was before a dialog opened, so closing it can put focus back.
   let playHelpReturnFocus = null;
+  // Encore best when the current run began; decides "New best!" on the results screen.
+  let encoreStartBest = 0;
   let onboardReturnFocus = null;
 
   function restoreFocus(el) {
@@ -73,11 +75,48 @@
     const ov = document.getElementById('play-help-overlay');
     if (!ov) return;
     const wasOpen = !ov.hidden;
+    hideResetConfirm(false);
+    const status = document.getElementById('help-reset-status');
+    if (status) status.textContent = '';
     ov.hidden = true;
     if (wasOpen) {
       restoreFocus(playHelpReturnFocus);
       playHelpReturnFocus = null;
     }
+  }
+
+  function isResetConfirmOpen() {
+    const box = document.getElementById('help-reset-confirm');
+    return !!(box && !box.hidden);
+  }
+
+  function showResetConfirm() {
+    const box = document.getElementById('help-reset-confirm');
+    const btn = document.getElementById('btn-help-reset-stats');
+    const status = document.getElementById('help-reset-status');
+    if (!box || !btn) return;
+    if (status) status.textContent = '';
+    btn.hidden = true;
+    box.hidden = false;
+    document.getElementById('btn-help-reset-cancel')?.focus();
+  }
+
+  function hideResetConfirm(refocus) {
+    const box = document.getElementById('help-reset-confirm');
+    const btn = document.getElementById('btn-help-reset-stats');
+    if (box) box.hidden = true;
+    if (btn) {
+      btn.hidden = false;
+      if (refocus) btn.focus();
+    }
+  }
+
+  /** Shared by the Help reset and the debug reset: clears stats and the Encore best, then refreshes readouts. */
+  function resetStats() {
+    PNStats.resetAll();
+    encoreStartBest = 0;
+    if (state.screen === 'adventure') PNUI.renderAdventure(startLevel);
+    if (state.screen === 'play' && director) PNUI.renderHud(state, director);
   }
 
   function isOnboardingOpen() {
@@ -265,6 +304,7 @@
     map = PNMap.createMap(level);
     canvas.width = map.width;
     canvas.height = map.height;
+    encoreStartBest = level.endless && window.PNStats ? PNStats.getEncoreBest() : 0;
     director = PNWaves.createDirector(level.waves, {
       betweenDelay: level.betweenDelay || 5,
       generate: level.endless ? level.generateWave : null,
@@ -341,8 +381,11 @@
   // Encore (endless) game over: results with waves survived and the best run.
   function endEndlessRun() {
     const survived = director ? director.wavesCleared() : 0;
-    const newBest = PNStats.submitEncoreWaves(survived);
-    const best = Math.max(PNStats.getEncoreBest(), survived);
+    PNStats.submitEncoreWaves(survived);
+    // Compare with the best from when this run began (mid-run saves already raised the stored one).
+    // Debug runs never save, so they never claim a new best.
+    const newBest = PNStats.canWrite() && survived > encoreStartBest;
+    const best = Math.max(PNStats.getEncoreBest(), PNStats.canWrite() ? survived : 0);
     state.message =
       'You held the stage for ' + survived + (survived === 1 ? ' wave' : ' waves') + '. ' +
       (newBest ? 'New best!' : 'Best: ' + best + (best === 1 ? ' wave.' : ' waves.'));
@@ -702,6 +745,20 @@
       if (a) a.uiClick();
       closePlayHelp();
     });
+    document.getElementById('btn-help-reset-stats')?.addEventListener('click', () => {
+      const a = audio();
+      if (a) a.uiClick();
+      showResetConfirm();
+    });
+    document.getElementById('btn-help-reset-cancel')?.addEventListener('click', () => {
+      hideResetConfirm(true);
+    });
+    document.getElementById('btn-help-reset-confirm')?.addEventListener('click', () => {
+      resetStats();
+      hideResetConfirm(true);
+      const status = document.getElementById('help-reset-status');
+      if (status) status.textContent = 'Stats cleared';
+    });
     document.getElementById('play-help-overlay')?.addEventListener('click', (ev) => {
       if (ev.target && ev.target.id === 'play-help-overlay') closePlayHelp();
     });
@@ -832,8 +889,7 @@
         reset.title = 'Debug: clear stage stats and the Encore best (progress is kept)';
         reset.addEventListener('click', () => {
           if (!window.confirm('Clear all stage stats and the Encore best? Progress is kept.')) return;
-          PNStats.resetAll();
-          PNUI.renderAdventure(startLevel);
+          resetStats();
         });
         bar.appendChild(reset);
       }
@@ -858,6 +914,10 @@
       if (state.screen !== 'play') return;
       if (isVolumeSlider(ev.target) && ev.key !== 'Escape') return;
       if (ev.key === 'Escape') {
+        if (isResetConfirmOpen()) {
+          hideResetConfirm(true);
+          return;
+        }
         if (isPlayHelpOpen()) {
           closePlayHelp();
           return;
@@ -868,6 +928,8 @@
         }
         togglePause();
       }
+      // Help is modal: no build, sell or wave hotkeys behind it.
+      if (isPlayHelpOpen()) return;
       const hotkeys = { '1': 'soprano', '2': 'alto', '3': 'tenor', '4': 'bass', '5': 'andy' };
       if (hotkeys[ev.key]) {
         const id = hotkeys[ev.key];

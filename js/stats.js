@@ -142,7 +142,7 @@
     }
   }
 
-  /** Clears stage stats and the Encore best (debug-only control). Progress is untouched. */
+  /** Clears stage stats and the Encore best only. Progress, unlocks and volume are untouched. */
   function resetAll() {
     try {
       localStorage.removeItem(STATS_KEY);
