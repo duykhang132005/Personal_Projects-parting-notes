@@ -85,6 +85,30 @@
     }
   }
 
+  let recordsReturnFocus = null;
+
+  function isRecordsOpen() {
+    const ov = document.getElementById('records-overlay');
+    return !!(ov && !ov.hidden);
+  }
+
+  function openRecords() {
+    const ov = document.getElementById('records-overlay');
+    if (!ov) return;
+    PNUI.renderRecords();
+    if (ov.hidden) recordsReturnFocus = document.activeElement;
+    ov.hidden = false;
+    document.getElementById('btn-records-close')?.focus();
+  }
+
+  function closeRecords() {
+    const ov = document.getElementById('records-overlay');
+    if (!ov || ov.hidden) return;
+    ov.hidden = true;
+    restoreFocus(recordsReturnFocus);
+    recordsReturnFocus = null;
+  }
+
   function isResetConfirmOpen() {
     const box = document.getElementById('help-reset-confirm');
     return !!(box && !box.hidden);
@@ -172,6 +196,8 @@
     speed: 1,
     status: 'playing',
     message: '',
+    // Game-time seconds since the first wave started (scaled by speed, frozen while paused).
+    runTime: 0,
   };
 
   let last = performance.now();
@@ -323,7 +349,9 @@
     state.speed = 1;
     state.status = 'playing';
     state.message = '';
+    state.runTime = 0;
     effects.length = 0;
+    hideRestartConfirm(false);
     hideEnd();
 
     const title = document.getElementById('level-title');
@@ -344,6 +372,49 @@
       a.syncMuteButtons();
     }
     showOnboardingIfNeeded(level);
+  }
+
+  // Mid-run restart asks first; restart from a win or loss screen (Retry) does not.
+  let restartWasPaused = false;
+
+  function isRestartConfirmOpen() {
+    const ov = document.getElementById('restart-overlay');
+    return !!(ov && !ov.hidden);
+  }
+
+  function requestRestart() {
+    if (!currentLevel) return;
+    if (state.status !== 'playing') {
+      restartLevel();
+      return;
+    }
+    const ov = document.getElementById('restart-overlay');
+    if (!ov || !ov.hidden) return;
+    restartWasPaused = state.paused;
+    state.paused = true;
+    ov.hidden = false;
+    PNUI.syncControls(state, director);
+    document.getElementById('btn-restart-cancel')?.focus();
+  }
+
+  function hideRestartConfirm(refocus) {
+    const ov = document.getElementById('restart-overlay');
+    if (!ov || ov.hidden) return;
+    ov.hidden = true;
+    if (refocus) restoreFocus(document.getElementById('btn-restart-stage'));
+  }
+
+  function cancelRestart() {
+    if (!isRestartConfirmOpen()) return;
+    hideRestartConfirm(true);
+    state.paused = restartWasPaused;
+    if (director) PNUI.syncControls(state, director);
+  }
+
+  function confirmRestart() {
+    hideRestartConfirm(false);
+    restartLevel();
+    restoreFocus(document.getElementById('btn-restart-stage'));
   }
 
   function restartLevel() {
@@ -696,6 +767,25 @@
       if (a) a.uiClick();
       goDictionary('title');
     });
+    document.getElementById('btn-title-records')?.addEventListener('click', () => {
+      const a = audio();
+      if (a) a.uiClick();
+      openRecords();
+    });
+    document.getElementById('btn-records-close')?.addEventListener('click', () => {
+      const a = audio();
+      if (a) a.uiClick();
+      closeRecords();
+    });
+    document.getElementById('records-overlay')?.addEventListener('click', (ev) => {
+      if (ev.target && ev.target.id === 'records-overlay') closeRecords();
+    });
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape' && isRecordsOpen()) {
+        ev.preventDefault();
+        closeRecords();
+      }
+    });
     document.getElementById('btn-adv-dictionary')?.addEventListener('click', () => {
       const a = audio();
       if (a) a.uiClick();
@@ -861,6 +951,16 @@
     document.getElementById('btn-pause')?.addEventListener('click', togglePause);
 
     document.getElementById('btn-speed')?.addEventListener('click', toggleSpeed);
+    document.getElementById('btn-restart-stage')?.addEventListener('click', () => {
+      const a = audio();
+      if (a) a.uiClick();
+      requestRestart();
+    });
+    document.getElementById('btn-restart-cancel')?.addEventListener('click', cancelRestart);
+    document.getElementById('btn-restart-confirm')?.addEventListener('click', confirmRestart);
+    document.getElementById('restart-overlay')?.addEventListener('click', (ev) => {
+      if (ev.target && ev.target.id === 'restart-overlay') cancelRestart();
+    });
 
     document.getElementById('btn-sell')?.addEventListener('click', () => {
       sellSelected();
@@ -870,6 +970,8 @@
     // Debug tools (off unless the page URL has ?debug): Choir Andy is unlocked without touching
     // the saved progress, and the adventure map can jump to the next uncleared stage.
     if (PNLevels.isDebug && PNLevels.isDebug()) {
+      const keyN = document.getElementById('help-key-debug');
+      if (keyN) keyN.hidden = false;
       const bar = document.querySelector('#screen-adventure .adv-header-bar');
       if (bar) {
         const dbg = document.createElement('button');
@@ -913,6 +1015,14 @@
     document.addEventListener('keydown', (ev) => {
       if (state.screen !== 'play') return;
       if (isVolumeSlider(ev.target) && ev.key !== 'Escape') return;
+      // Restart confirm is modal: Esc cancels it, other hotkeys wait.
+      if (isRestartConfirmOpen()) {
+        if (ev.key === 'Escape') {
+          ev.preventDefault();
+          cancelRestart();
+        }
+        return;
+      }
       if (ev.key === 'Escape') {
         if (isResetConfirmOpen()) {
           hideResetConfirm(true);
@@ -961,6 +1071,7 @@
     }
 
     const scaled = dt * state.speed;
+    if (director.started) state.runTime += scaled;
     const dir = director.update(scaled, livingEnemies().length);
     if (dir.spawned) spawnNote(dir.spawned);
     // Save the Encore best as each wave is cleared, so quitting mid-run keeps it.
@@ -971,7 +1082,7 @@
         ? currentLevel.name + ' cleared!'
         : 'The phrase is broken.';
       if (currentLevel) PNLevels.markCleared(currentLevel.id);
-      if (currentLevel && window.PNStats) PNStats.recordWin(currentLevel.id, state.lives);
+      if (currentLevel && window.PNStats) PNStats.recordWin(currentLevel.id, state.lives, state.runTime);
       // Final stage → full congratulations screen
       if (currentLevel && (currentLevel.id === 'closing' || currentLevel.index === 9)) {
         goCongrats();

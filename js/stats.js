@@ -10,7 +10,7 @@
   }
 
   function emptyStage() {
-    return { clears: 0, losses: 0, bestLives: null, lastLossWave: null, lossWaves: {} };
+    return { clears: 0, losses: 0, bestLives: null, bestTime: null, lastLossWave: null, lossWaves: {} };
   }
 
   function cleanStage(s) {
@@ -19,6 +19,10 @@
     out.clears = Math.max(0, Math.floor(Number(s.clears) || 0));
     out.losses = Math.max(0, Math.floor(Number(s.losses) || 0));
     if (Number.isFinite(Number(s.bestLives)) && s.bestLives !== null) out.bestLives = Math.max(0, Math.floor(Number(s.bestLives)));
+    // bestTime (added Oct 19): fastest win in game seconds. Older saves simply lack it.
+    if (s.bestTime !== null && s.bestTime !== undefined && Number.isFinite(Number(s.bestTime)) && Number(s.bestTime) >= 0) {
+      out.bestTime = Math.round(Number(s.bestTime) * 10) / 10;
+    }
     if (Number.isFinite(Number(s.lastLossWave)) && s.lastLossWave !== null) out.lastLossWave = Math.max(1, Math.floor(Number(s.lastLossWave)));
     if (s.lossWaves && typeof s.lossWaves === 'object') {
       Object.keys(s.lossWaves).forEach(function (w) {
@@ -60,13 +64,19 @@
     return all.stages[levelId] ? all.stages[levelId] : emptyStage();
   }
 
-  function recordWin(levelId, livesLeft) {
+  /** timeSec: game-time seconds for the run (scaled by speed, frozen while paused). */
+  function recordWin(levelId, livesLeft, timeSec) {
     if (!levelId || !canWrite()) return null;
     const all = loadAll();
     const s = all.stages[levelId] || emptyStage();
     s.clears += 1;
     const lives = Math.max(0, Math.floor(Number(livesLeft) || 0));
     if (s.bestLives === null || lives > s.bestLives) s.bestLives = lives;
+    const t = Number(timeSec);
+    if (Number.isFinite(t) && t >= 0) {
+      const rounded = Math.round(t * 10) / 10;
+      if (s.bestTime === null || rounded < s.bestTime) s.bestTime = rounded;
+    }
     all.stages[levelId] = s;
     saveAll(all);
     return s;
@@ -121,6 +131,16 @@
     return parts.join(' · ') + '.';
   }
 
+  /** Seconds to "m:ss" (floored to whole seconds); "-" when unknown. */
+  function formatTime(sec) {
+    const n = Number(sec);
+    if (sec === null || sec === undefined || !Number.isFinite(n) || n < 0) return '-';
+    const whole = Math.floor(n);
+    const m = Math.floor(whole / 60);
+    const s = whole % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
   function getEncoreBest() {
     try {
       const n = Math.floor(Number(localStorage.getItem(ENCORE_BEST_KEY)) || 0);
@@ -160,6 +180,7 @@
     commonLossWave,
     nodeSummary,
     detailText,
+    formatTime,
     getEncoreBest,
     submitEncoreWaves,
     resetAll,

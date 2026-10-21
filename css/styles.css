@@ -254,6 +254,35 @@ html, body {
   margin-bottom: 0.85rem;
 }
 
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+.records-caption {
+  text-align: left;
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+}
+.records-table th,
+.records-table td {
+  text-align: left;
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid rgba(92, 58, 30, 0.25);
+}
+.records-table td:nth-child(n + 3),
+.records-table th:nth-child(n + 3) {
+  text-align: right;
+}
+.records-table tr.locked td,
+.records-table tr.locked th {
+  opacity: 0.6;
+}
+.records-table tr.endless th,
+.records-table tr.endless td {
+  font-weight: 600;
+}
+
 .play-help-hint {
   margin: 0.75rem 0 0;
   font-size: 0.9rem;
@@ -937,6 +966,64 @@ kbd {
 
 @media (prefers-reduced-motion: reduce) {
   .title-start { animation: none; }
+}
+
+/* Title button stack: no page scroll on the title, even widths, tidy on small and short screens */
+#app:has(> #screen-title:not([hidden])) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.title-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.7rem;
+  width: min(100%, 15rem);
+}
+.title-actions .title-start {
+  min-width: 0;
+  width: 100%;
+  min-height: 48px;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+@media (min-width: 720px) {
+  .title-actions {
+    grid-template-columns: repeat(3, 12rem);
+    width: auto;
+  }
+}
+@media (max-height: 700px) {
+  .title-center {
+    padding-top: 1rem;
+    padding-bottom: 1.25rem;
+  }
+  .title-logo {
+    margin-bottom: 0.9rem;
+    font-size: clamp(2.4rem, 9vh, 4.2rem);
+  }
+  .title-actions .title-start {
+    padding-top: 0.6rem;
+    padding-bottom: 0.55rem;
+  }
+  .title-credit {
+    margin-top: 0.55rem;
+  }
+}
+
+.restart-card {
+  max-width: 24rem;
+}
+.restart-card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+}
+.restart-card p {
+  margin: 0 0 0.9rem;
+}
+.restart-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
 }
 
 /* Play canvas border for hall look */

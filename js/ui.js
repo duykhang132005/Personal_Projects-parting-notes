@@ -235,6 +235,42 @@
     return PNStats.nodeSummary(PNStats.get(level.id));
   }
 
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  }
+
+  /** Fills the Records dialog: every stage plus Encore, read fresh from PNStats and progress. */
+  function renderRecords() {
+    const body = document.getElementById('records-body');
+    if (!body || !global.PNStats) return;
+    const progress = PNLevels.loadProgress();
+    const rows = PNLevels.LEVELS.map((level) => {
+      const unlocked = level.index < progress.unlocked;
+      const s = PNStats.get(level.id);
+      const played = s.clears > 0 || s.losses > 0;
+      let best;
+      if (!unlocked) best = 'Locked';
+      else if (s.clears > 0 && s.bestLives !== null) best = s.bestLives + (s.bestLives === 1 ? ' life left' : ' lives left');
+      else best = 'Not cleared';
+      const time = unlocked && s.bestTime !== null ? PNStats.formatTime(s.bestTime) : '-';
+      return { name: level.name, best, time, clears: played ? String(s.clears) : '-', losses: played ? String(s.losses) : '-', cls: unlocked ? '' : 'locked', id: level.id };
+    });
+    const encUnlocked = !!(PNLevels.isEndlessUnlocked && PNLevels.isEndlessUnlocked());
+    const eb = PNStats.getEncoreBest();
+    rows.push({
+      name: PNLevels.ENDLESS_LEVEL.name,
+      best: !encUnlocked ? 'Locked' : eb > 0 ? 'Best: wave ' + eb : 'No best yet',
+      time: '-',
+      clears: '-',
+      losses: '-',
+      cls: 'endless' + (encUnlocked ? '' : ' locked'),
+      id: 'endless',
+    });
+    body.innerHTML = rows.map((r) =>
+      '<tr class="' + r.cls + '" data-record="' + r.id + '"><th scope="row">' + escapeHtml(r.name) + '</th><td>' +
+      escapeHtml(r.best) + '</td><td>' + r.time + '</td><td>' + r.clears + '</td><td>' + r.losses + '</td></tr>').join('');
+  }
+
   function updateAdventureDetail(level, unlocked, cleared) {
     const nameEl = document.getElementById('adv-detail-name');
     const blurbEl = document.getElementById('adv-detail-blurb');
@@ -672,6 +708,7 @@
     showScreen,
     paintTitleArt,
     renderHud,
+    renderRecords,
     syncShop,
     syncControls,
     paintShopIcons,

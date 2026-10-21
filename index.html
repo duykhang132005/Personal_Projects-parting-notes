@@ -24,6 +24,9 @@
           <button type="button" class="title-start title-dict" id="btn-title-dictionary">
             <span class="title-start-label">Dictionary</span>
           </button>
+          <button type="button" class="title-start title-dict" id="btn-title-records" aria-haspopup="dialog">
+            <span class="title-start-label">Records</span>
+          </button>
         </div>
         <p class="title-credit">Inspired by Harvard Glee Club repertoire · <a href="https://open.spotify.com/playlist/5OHBPowItjFTRPLPkUUiMk" target="_blank" rel="noopener noreferrer">HGC2627 on Spotify</a> (listen-along; in-game uses only files you add)</p>
         <div class="title-sound">
@@ -40,6 +43,22 @@
               <output class="music-volume-out" data-sfx-volume-out aria-hidden="true">100%</output>
             </label>
           </div>
+        </div>
+      </div>
+      <!-- Records dialog (title screen) -->
+      <div id="records-overlay" class="play-help-overlay records-overlay" hidden>
+        <div class="play-help-card records-card" role="dialog" aria-modal="true" aria-labelledby="records-title">
+          <header class="play-help-header">
+            <h2 id="records-title">Records</h2>
+            <button type="button" class="ctrl-btn" id="btn-records-close" aria-label="Close records">Close</button>
+          </header>
+          <table class="records-table">
+            <caption class="records-caption">Best results per stage on this device.</caption>
+            <thead>
+              <tr><th scope="col">Stage</th><th scope="col">Best</th><th scope="col">Best time</th><th scope="col">Clears</th><th scope="col">Losses</th></tr>
+            </thead>
+            <tbody id="records-body"></tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -159,6 +178,7 @@
           <button type="button" class="ctrl-btn" id="btn-start">Start wave</button>
           <button type="button" class="ctrl-btn" id="btn-pause">Pause</button>
           <button type="button" class="ctrl-btn" id="btn-speed">Speed ×1</button>
+          <button type="button" class="ctrl-btn" id="btn-restart-stage" aria-haspopup="dialog">Restart</button>
           <button type="button" class="ctrl-btn" id="btn-sell" disabled>Sell (50%)</button>
           <button type="button" class="ctrl-btn mute-btn" data-mute-btn aria-pressed="false" title="Mute sound">Mute</button>
           <div class="volume-stack">
@@ -246,6 +266,18 @@
         </div>
       </main>
 
+      <!-- Mid-run restart confirm -->
+      <div id="restart-overlay" class="play-help-overlay restart-overlay" hidden>
+        <div class="play-help-card restart-card" role="dialog" aria-modal="true" aria-labelledby="restart-title" aria-describedby="restart-desc">
+          <h2 id="restart-title">Restart this stage?</h2>
+          <p id="restart-desc">This run will be lost. It does not count as a win or a loss.</p>
+          <div class="restart-actions">
+            <button type="button" class="ctrl-btn help-reset-danger" id="btn-restart-confirm">Confirm restart</button>
+            <button type="button" class="ctrl-btn" id="btn-restart-cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+
       <!-- In-play help overlay -->
       <div id="play-help-overlay" class="play-help-overlay" hidden>
         <div class="play-help-card" role="dialog" aria-modal="true" aria-labelledby="play-help-title">
@@ -262,12 +294,14 @@
                 <li>Press <strong>Start wave</strong> or <kbd>Space</kbd>.</li>
               </ul>
             </section>
-            <section>
-              <h3>Controls</h3>
-              <ul>
-                <li><kbd>Space</kbd> — start next wave; during a wave, toggle speed.</li>
-                <li><kbd>Esc</kbd> — pause / resume.</li>
-                <li><kbd>S</kbd> — sell selected singer (50% refund).</li>
+            <section aria-labelledby="help-keys-title">
+              <h3 id="help-keys-title">Keyboard shortcuts</h3>
+              <ul class="help-keys" id="help-keys">
+                <li><kbd>1</kbd> to <kbd>5</kbd>: pick Soprano, Alto, Tenor, Bass or Andy (press again to cancel; 5 once Andy is unlocked).</li>
+                <li><kbd>S</kbd>: sell the selected singer (50% refund).</li>
+                <li><kbd>Space</kbd>: start the next wave; during a wave, toggle speed.</li>
+                <li><kbd>Esc</kbd>: pause or resume; closes this dialog.</li>
+                <li id="help-key-debug" hidden><kbd>N</kbd>: on the map, jump to the next uncleared stage (debug only).</li>
               </ul>
             </section>
             <section>
