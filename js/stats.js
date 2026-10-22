@@ -119,9 +119,11 @@
 
   /** Fuller line for the detail panel. */
   function detailText(s) {
-    if (!s || (s.clears === 0 && s.losses === 0)) return 'No runs recorded yet.';
+    const timeText = 'Best time ' + formatTime(s ? s.bestTime : null);
+    if (!s || (s.clears === 0 && s.losses === 0)) return 'No runs recorded yet · ' + timeText + '.';
     const parts = ['Clears ' + s.clears, 'Losses ' + s.losses];
     if (s.bestLives !== null) parts.push('Best ' + s.bestLives + (s.bestLives === 1 ? ' life left' : ' lives left'));
+    parts.push(timeText);
     if (s.lastLossWave !== null) {
       let loss = 'Last loss on wave ' + s.lastLossWave;
       const common = commonLossWave(s);
@@ -129,6 +131,24 @@
       parts.push(loss);
     }
     return parts.join(' · ') + '.';
+  }
+
+  /**
+   * Which records a win would set, compared with the stage stats from before the run.
+   * A first clear sets both. Returns [] in debug, since debug never writes stats.
+   */
+  function winImprovements(before, livesLeft, timeSec) {
+    if (!canWrite()) return [];
+    const b = before || emptyStage();
+    const out = [];
+    const lives = Math.max(0, Math.floor(Number(livesLeft) || 0));
+    if (b.clears === 0 || b.bestLives === null || lives > b.bestLives) out.push('lives');
+    const t = Number(timeSec);
+    if (Number.isFinite(t) && t >= 0) {
+      const rounded = Math.round(t * 10) / 10;
+      if (b.bestTime === null || rounded < b.bestTime) out.push('time');
+    }
+    return out;
   }
 
   /** Seconds to "m:ss" (floored to whole seconds); "-" when unknown. */
@@ -181,6 +201,7 @@
     nodeSummary,
     detailText,
     formatTime,
+    winImprovements,
     getEncoreBest,
     submitEncoreWaves,
     resetAll,

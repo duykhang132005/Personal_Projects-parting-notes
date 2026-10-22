@@ -275,6 +275,21 @@
     else goTitle();
   }
 
+  // "New record!" line on the win screens (stage transition and the Closing Night congrats).
+  function setRecordBadge(improved) {
+    let text = '';
+    if (improved && improved.length) {
+      const what = improved.length === 2
+        ? 'Best lives left and best time.'
+        : improved[0] === 'lives' ? 'Best lives left.' : 'Best time.';
+      text = 'New record! ' + what;
+    }
+    document.querySelectorAll('[data-record-badge]').forEach((el) => {
+      el.textContent = text;
+      el.hidden = !text;
+    });
+  }
+
   function showLevelTransition(cleared, next) {
     pendingNextLevelId = next ? next.id : null;
     hideEnd();
@@ -350,6 +365,7 @@
     state.status = 'playing';
     state.message = '';
     state.runTime = 0;
+    setRecordBadge(null);
     effects.length = 0;
     hideRestartConfirm(false);
     hideEnd();
@@ -1082,7 +1098,11 @@
         ? currentLevel.name + ' cleared!'
         : 'The phrase is broken.';
       if (currentLevel) PNLevels.markCleared(currentLevel.id);
-      if (currentLevel && window.PNStats) PNStats.recordWin(currentLevel.id, state.lives, state.runTime);
+      if (currentLevel && window.PNStats) {
+        const before = PNStats.get(currentLevel.id);
+        setRecordBadge(PNStats.winImprovements(before, state.lives, state.runTime));
+        PNStats.recordWin(currentLevel.id, state.lives, state.runTime);
+      }
       // Final stage → full congratulations screen
       if (currentLevel && (currentLevel.id === 'closing' || currentLevel.index === 9)) {
         goCongrats();

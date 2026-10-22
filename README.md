@@ -40,6 +40,44 @@ Per-tower targeting: Front / Back / Closest / Highest HP.
 
 **Boss:** Andy Clark (Closing Night) — conductor who periodically stuns all towers. Clear the stage to recruit **Choir Andy** for the shop.
 
+## Records and stats
+
+**Records:** the **Records** button on the title screen opens a dialog (Esc or Close closes it and returns focus to the button). It has one row per stage plus Encore, with these columns:
+
+- **Stage:** the stage name.
+- **Best:** most lives left on a win, e.g. "18 lives left". A stage you can play but have not won shows **Not cleared**; a stage you have not reached shows **Locked**.
+- **Best time:** fastest win as m:ss, or "-" when there is none.
+- **Clears** and **Losses:** counts, or "-" for a stage with no recorded runs.
+- **Encore (endless):** Best shows "Best: wave N", "No best yet" or Locked; the other columns show "-".
+
+**Best time** is game time, not wall-clock time. The clock starts when the first wave starts, stops while paused (and while the Restart confirm is open; Help does not pause) and runs twice as fast at Speed x2, so the same run scores the same time at either speed. The map detail panel shows it next to the other stats ("-" if none). A win that beats the stage's best lives left or best time (compared with your records from before that run, so a first clear counts) shows a **New record!** badge on the win screen saying which record improved.
+
+**Reset stats:** in the Help dialog during play. Press **Reset stats**, then **Confirm reset** (or **Cancel**, or Esc). It clears stage stats and the Encore best only, then shows "Stats cleared". Progress, unlocked stages and singers, mute, volume and first-run tips are kept.
+
+**Restart:** the **Restart** button next to Speed asks first during a run (**Confirm restart** or **Cancel**; focus starts on Cancel, Esc cancels, and the game is paused while it asks). On the defeat or Encore-over screen, **Retry** restarts straight away. A restart counts as neither a win nor a loss.
+
+**Keyboard shortcuts** (also listed in Help):
+
+- **1** to **5**: pick Soprano, Alto, Tenor, Bass or Andy (5 once Andy is unlocked); press again to cancel.
+- **S**: sell the selected singer (50% refund).
+- **Space**: start the next wave; during a wave, toggle speed.
+- **Esc**: pause or resume; closes Help and cancels a confirm.
+- **N** (debug only): on the map, jump to the next uncleared stage.
+
+Shortcuts are paused while Help or the Restart confirm is open, and while a volume slider has focus (except Esc).
+
+**Debug never writes stats:** with `?debug`, wins, losses, best times and the Encore best are read but not saved, and no New record! badge is shown.
+
+**Storage keys** (localStorage):
+
+- `parting-notes-progress`: cleared and unlocked stages and singers.
+- `pn_stage_stats_v1`: per-stage clears, losses, best lives left, best time (seconds) and losing waves.
+- `pn_encore_best_v1`: best Encore wave count.
+- `parting-notes-mute`, `pn_music_volume_v1`, `pn_sfx_volume_v1`: sound settings.
+- `parting-notes-seen-tips`: first-run tips seen.
+
+Music files found missing are remembered for 10 minutes in sessionStorage as `pn_bgm_missing_v1` (ignored with `?debug`).
+
 ## Stack
 
 Vanilla HTML, CSS, and JS. MIT — see [LICENSE](LICENSE).
