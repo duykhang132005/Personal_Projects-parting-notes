@@ -365,6 +365,7 @@
     state.status = 'playing';
     state.message = '';
     state.runTime = 0;
+    resetLivesAnnouncer();
     setRecordBadge(null);
     effects.length = 0;
     hideRestartConfirm(false);
@@ -761,6 +762,48 @@
     return started;
   }
 
+  // Lives announcements for screen readers: only when lives drop, and several leaks close
+  // together (or a boss leak) become one message instead of a burst.
+  let livesAnnounced = null;
+  let livesAnnounceTimer = 0;
+
+  function resetLivesAnnouncer() {
+    clearTimeout(livesAnnounceTimer);
+    livesAnnounceTimer = 0;
+    livesAnnounced = state.lives;
+    const live = document.getElementById('lives-live');
+    if (live) live.textContent = '';
+  }
+
+  function queueLivesAnnouncement() {
+    if (livesAnnounced !== null && state.lives >= livesAnnounced) return;
+    if (livesAnnounceTimer) return;
+    livesAnnounceTimer = setTimeout(() => {
+      livesAnnounceTimer = 0;
+      if (livesAnnounced !== null && state.lives >= livesAnnounced) return;
+      livesAnnounced = state.lives;
+      const live = document.getElementById('lives-live');
+      if (live) live.textContent = 'Lives: ' + state.lives;
+    }, 400);
+  }
+
+  // Focusable controls inside a dialog, in tab order, skipping hidden and disabled ones.
+  function dialogFocusables(root) {
+    const sel = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    return Array.from(root.querySelectorAll(sel)).filter((el) =>
+      !el.disabled && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden');
+  }
+
+  // The dialog that owns focus right now: the Restart confirm sits above Help and Records.
+  function openTrapDialog() {
+    const ids = ['restart-overlay', 'onboard-overlay', 'play-help-overlay', 'records-overlay'];
+    for (const id of ids) {
+      const ov = document.getElementById(id);
+      if (ov && !ov.hidden && ov.getClientRects().length > 0) return ov.querySelector('[role="dialog"]') || ov;
+    }
+    return null;
+  }
+
   function togglePause() {
     if (state.status !== 'playing') return;
     state.paused = !state.paused;
@@ -795,6 +838,42 @@
     });
     document.getElementById('records-overlay')?.addEventListener('click', (ev) => {
       if (ev.target && ev.target.id === 'records-overlay') closeRecords();
+    });
+    // Shared Tab trap for Help, Records and the Restart confirm.
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Tab' || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+      const dlg = openTrapDialog();
+      if (!dlg) return;
+      const items = dialogFocusables(dlg);
+      if (!items.length) {
+        ev.preventDefault();
+        return;
+      }
+      const first = items[0];
+      const lastEl = items[items.length - 1];
+      const active = document.activeElement;
+      if (!dlg.contains(active)) {
+        ev.preventDefault();
+        (ev.shiftKey ? lastEl : first).focus();
+      } else if (ev.shiftKey && active === first) {
+        ev.preventDefault();
+        lastEl.focus();
+      } else if (!ev.shiftKey && active === lastEl) {
+        ev.preventDefault();
+        first.focus();
+      }
+    }, true);
+    // Hidden tab or minimized window: pause an active run. Resuming stays manual.
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) return;
+      // Restart confirm already holds a pause; make Cancel keep it instead of resuming.
+      if (isRestartConfirmOpen()) {
+        restartWasPaused = true;
+        return;
+      }
+      if (state.screen !== 'play' || state.status !== 'playing' || state.paused) return;
+      if (!director || !director.started) return;
+      togglePause();
     });
     document.addEventListener('keydown', (ev) => {
       if (ev.key === 'Escape' && isRecordsOpen()) {
@@ -1121,6 +1200,7 @@
         // Boss leaking costs more lives
         const leak = e.isBoss ? 5 : 1;
         state.lives = Math.max(0, state.lives - leak);
+        queueLivesAnnouncement();
         const a = audio();
         if (a) a.lifeLeak();
         if (state.lives <= 0 && state.status === 'playing') {

@@ -66,6 +66,10 @@ Per-tower targeting: Front / Back / Closest / Highest HP.
 
 Shortcuts are paused while Help or the Restart confirm is open, and while a volume slider has focus (except Esc).
 
+**Switching tabs:** hiding the tab or window during a wave pauses the game (which also stops the best-time clock). It does not resume on its own when you come back; press **Resume** or Esc. Nothing happens before the first wave or when already paused.
+
+**Dialogs and screen readers:** while Help, Records, the Restart confirm or the first-run tips are open, Tab and Shift+Tab stay inside the dialog. Screen readers hear "Lives: N" when you lose lives (one message per burst of leaks), and the Speed button reports pressed at Speed x2.
+
 **Debug never writes stats:** with `?debug`, wins, losses, best times and the Encore best are read but not saved, and no New record! badge is shown.
 
 **Storage keys** (localStorage):

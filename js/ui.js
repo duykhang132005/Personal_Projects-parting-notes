@@ -7,33 +7,44 @@
     });
   }
 
+  // Write DOM text/attributes only when they change (renderHud and syncControls run every frame).
+  function setText(el, s) {
+    if (el && el.textContent !== s) el.textContent = s;
+  }
+  function setAttr(el, name, v) {
+    if (el && el.getAttribute(name) !== v) el.setAttribute(name, v);
+  }
+  function setDisabled(el, v) {
+    if (el && el.disabled !== v) el.disabled = v;
+  }
+
   function renderHud(state, director) {
     const lives = document.querySelector('[data-hud="lives"]');
     const gold = document.querySelector('[data-hud="gold"]');
     const wave = document.querySelector('[data-hud="wave"]');
     const phase = document.querySelector('[data-hud="phase"]');
-    if (lives) lives.textContent = 'Lives: ' + state.lives;
-    if (gold) gold.textContent = 'Gold: ' + state.gold;
+    setText(lives, 'Lives: ' + state.lives);
+    setText(gold, 'Gold: ' + state.gold);
     if (wave && director && director.endless) {
       const best = global.PNStats ? PNStats.getEncoreBest() : 0;
-      wave.textContent =
+      setText(wave,
         'Encore wave ' + (director.started ? director.currentDisplay() : 0) +
-        (best > 0 ? ' (best ' + best + ')' : '');
+        (best > 0 ? ' (best ' + best + ')' : ''));
     } else if (wave && director) {
       const total = director.totalWaves();
       const cur = director.currentDisplay();
-      if (!director.started) wave.textContent = 'Wave: — / ' + total;
-      else wave.textContent = 'Wave: ' + cur + ' / ' + total;
+      if (!director.started) setText(wave, 'Wave: \u2014 / ' + total);
+      else setText(wave, 'Wave: ' + cur + ' / ' + total);
     }
     if (phase && director) {
-      if (state.status === 'won') phase.textContent = 'Victory';
-      else if (state.status === 'lost') phase.textContent = 'Defeat';
-      else if (director.phase === 'ready') phase.textContent = 'Build · press Start';
+      if (state.status === 'won') setText(phase, 'Victory');
+      else if (state.status === 'lost') setText(phase, 'Defeat');
+      else if (director.phase === 'ready') setText(phase, 'Build · press Start');
       else if (director.phase === 'between') {
-        phase.textContent =
-          'Break · next in ' + Math.max(0, Math.ceil(director.betweenTimer)) + 's';
-      } else if (director.phase === 'spawning') phase.textContent = 'Fight';
-      else phase.textContent = 'Parting Notes';
+        setText(phase,
+          'Break · next in ' + Math.max(0, Math.ceil(director.betweenTimer)) + 's');
+      } else if (director.phase === 'spawning') setText(phase, 'Fight');
+      else setText(phase, 'Parting Notes');
     }
   }
 
@@ -174,21 +185,22 @@
     const pause = document.getElementById('btn-pause');
     const speed = document.getElementById('btn-speed');
     if (start && director) {
-      if (director.phase === 'between') start.textContent = 'Next wave';
-      else if (director.phase === 'ready') start.textContent = 'Start wave';
-      else start.textContent = 'In progress';
-      start.disabled =
+      if (director.phase === 'between') setText(start, 'Next wave');
+      else if (director.phase === 'ready') setText(start, 'Start wave');
+      else setText(start, 'In progress');
+      setDisabled(start,
         state.status !== 'playing' ||
         director.phase === 'spawning' ||
-        director.phase === 'won';
+        director.phase === 'won');
     }
     if (pause) {
-      pause.textContent = state.paused ? 'Resume' : 'Pause';
-      pause.disabled = state.status !== 'playing';
+      setText(pause, state.paused ? 'Resume' : 'Pause');
+      setDisabled(pause, state.status !== 'playing');
     }
     if (speed) {
-      speed.textContent = 'Speed ×' + state.speed;
-      speed.disabled = state.status !== 'playing';
+      setText(speed, 'Speed ×' + state.speed);
+      setAttr(speed, 'aria-pressed', state.speed !== 1 ? 'true' : 'false');
+      setDisabled(speed, state.status !== 'playing');
     }
   }
 

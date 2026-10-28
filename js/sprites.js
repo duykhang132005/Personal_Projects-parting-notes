@@ -55,33 +55,6 @@
   const BLACK_DARK = '#0c0c0e';
   const WHITE = '#f5f3ef';
 
-  function bodyCoat(ctx, cx, cy, color, colorDark) {
-    const grd = ctx.createLinearGradient(cx - 18, cy + 10, cx + 18, cy + 42);
-    grd.addColorStop(0, color);
-    grd.addColorStop(1, colorDark);
-    ctx.fillStyle = grd;
-    roundRect(ctx, cx - 18, cy + 12, 36, 30, 8);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.22)';
-    ctx.beginPath();
-    ctx.moveTo(cx - 4, cy + 12);
-    ctx.lineTo(cx - 12, cy + 28);
-    ctx.lineTo(cx - 4, cy + 24);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(cx + 4, cy + 12);
-    ctx.lineTo(cx + 12, cy + 28);
-    ctx.lineTo(cx + 4, cy + 24);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = colorDark;
-    roundRect(ctx, cx - 12, cy + 40, 8, 10, 2);
-    ctx.fill();
-    roundRect(ctx, cx + 4, cy + 40, 8, 10, 2);
-    ctx.fill();
-  }
-
   function bodyDress(ctx, cx, cy) {
     const grd = ctx.createLinearGradient(cx - 20, cy + 8, cx + 20, cy + 48);
     grd.addColorStop(0, BLACK);
@@ -552,18 +525,6 @@
     ctx.beginPath();
     ctx.arc(cx, cy, 22, 0, Math.PI * 2);
     ctx.fill();
-  }
-
-  function drawFolkTint(ctx, typeId, cx, cy) {
-    // redraw shape in warm browns over a subtle wood wash
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = '#8b6340';
-    ctx.beginPath();
-    ctx.ellipse(0, 2, 18, 16, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
   }
 
   function recolorFolkNote(ctx, typeId, cx, cy) {
