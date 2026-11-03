@@ -1110,6 +1110,8 @@
     document.addEventListener('keydown', (ev) => {
       if (state.screen !== 'play') return;
       if (isVolumeSlider(ev.target) && ev.key !== 'Escape') return;
+      // First-run tips: Space presses the focused tip button instead of starting the wave.
+      if (ev.key === ' ' && isOnboardingOpen()) return;
       // Restart confirm is modal: Esc cancels it, other hotkeys wait.
       if (isRestartConfirmOpen()) {
         if (ev.key === 'Escape') {
