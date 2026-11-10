@@ -891,13 +891,33 @@
       if (a) a.uiClick();
       leaveDictionary();
     });
-    document.querySelectorAll('[data-dict-tab]').forEach((btn) => {
+    const dictTabs = Array.from(document.querySelectorAll('[data-dict-tab]'));
+    function activateDictTab(btn) {
+      const tab = btn.getAttribute('data-dict-tab');
+      PNUI.setDictionaryTab(tab);
+      requestAnimationFrame(() => PNUI.paintDictionaryIcons());
+    }
+    dictTabs.forEach((btn, i) => {
       btn.addEventListener('click', () => {
         const a = audio();
         if (a) a.uiClick();
-        const tab = btn.getAttribute('data-dict-tab');
-        PNUI.setDictionaryTab(tab);
-        requestAnimationFrame(() => PNUI.paintDictionaryIcons());
+        activateDictTab(btn);
+      });
+      // Tablist keyboard pattern: Left/Right wrap, Home/End jump; focus follows selection.
+      btn.addEventListener('keydown', (ev) => {
+        let next = -1;
+        if (ev.key === 'ArrowRight') next = (i + 1) % dictTabs.length;
+        else if (ev.key === 'ArrowLeft') next = (i - 1 + dictTabs.length) % dictTabs.length;
+        else if (ev.key === 'Home') next = 0;
+        else if (ev.key === 'End') next = dictTabs.length - 1;
+        if (next < 0) return;
+        ev.preventDefault();
+        const target = dictTabs[next];
+        if (target === btn) return;
+        const a = audio();
+        if (a) a.uiClick();
+        activateDictTab(target);
+        target.focus();
       });
     });
     document.getElementById('btn-map-prev')?.addEventListener('click', () => {

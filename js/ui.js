@@ -695,6 +695,8 @@
       const on = btn.getAttribute('data-dict-tab') === dictTab;
       btn.classList.toggle('active', on);
       btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      // Roving tabindex: only the selected tab sits in the Tab order; arrows move between tabs.
+      btn.tabIndex = on ? 0 : -1;
     });
     document.querySelectorAll('[data-dict-panel]').forEach((panel) => {
       panel.hidden = panel.getAttribute('data-dict-panel') !== dictTab;

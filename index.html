@@ -28,7 +28,7 @@
             <span class="title-start-label">Records</span>
           </button>
         </div>
-        <p class="title-credit">Inspired by Harvard Glee Club repertoire · <a href="https://open.spotify.com/playlist/5OHBPowItjFTRPLPkUUiMk" target="_blank" rel="noopener noreferrer">HGC2627 on Spotify</a> (listen-along; in-game uses only files you add)</p>
+        <p class="title-credit">Inspired by Harvard Glee Club repertoire · <a href="https://open.spotify.com/playlist/5OHBPowItjFTRPLPkUUiMk" target="_blank" rel="noopener noreferrer">HGC2627 on Spotify<span class="visually-hidden"> (opens in a new tab)</span></a> (listen-along; in-game uses only files you add)</p>
         <div class="title-sound">
           <button type="button" class="mute-btn title-mute" data-mute-btn aria-pressed="false" title="Mute sound">Mute</button>
           <div class="volume-stack">
@@ -101,11 +101,11 @@
         <p class="dict-sub">Choir voices and the notes that walk the path.</p>
       </header>
       <div class="dict-tabs" role="tablist" aria-label="Dictionary sections">
-        <button type="button" class="dict-tab active" role="tab" id="btn-dict-tab-singers" data-dict-tab="singers" aria-selected="true">Singers</button>
-        <button type="button" class="dict-tab" role="tab" id="btn-dict-tab-notes" data-dict-tab="notes" aria-selected="false">Notes</button>
+        <button type="button" class="dict-tab active" role="tab" id="btn-dict-tab-singers" data-dict-tab="singers" aria-controls="dict-panel-singers" aria-selected="true" tabindex="0">Singers</button>
+        <button type="button" class="dict-tab" role="tab" id="btn-dict-tab-notes" data-dict-tab="notes" aria-controls="dict-panel-notes" aria-selected="false" tabindex="-1">Notes</button>
       </div>
-      <div id="dict-panel-singers" class="dict-panel" data-dict-panel="singers" role="tabpanel"></div>
-      <div id="dict-panel-notes" class="dict-panel" data-dict-panel="notes" role="tabpanel" hidden></div>
+      <div id="dict-panel-singers" class="dict-panel" data-dict-panel="singers" role="tabpanel" aria-labelledby="btn-dict-tab-singers" tabindex="0"></div>
+      <div id="dict-panel-notes" class="dict-panel" data-dict-panel="notes" role="tabpanel" aria-labelledby="btn-dict-tab-notes" tabindex="0" hidden></div>
     </section>
 
 

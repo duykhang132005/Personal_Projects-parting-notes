@@ -22,6 +22,10 @@
   let bgmMode = null; // 'title' | 'adventure' | 'play' | 'closing' | null
   let htmlBgm = null;
   let htmlBgmUrl = null; // relative path currently loaded
+  // Hidden tab: the context is suspended and the file bed paused. These remember what to bring back.
+  let pageHidden = typeof document !== 'undefined' && !!document.hidden;
+  let ctxWasRunning = false;
+  let htmlBgmWasPlaying = false;
   let trackCache = {}; // mode -> url|false
   // URLs that failed to load (for example a repertoire file that is not there yet). Shared across
   // modes and kept for this tab session (10 minute window) so a missing file is probed once, not on
@@ -145,7 +149,7 @@
     unlocked = true;
     // The title bed is usually loaded before the first gesture, so start it now.
     if (htmlBgm && bgmMode && !muted && htmlBgm.paused && htmlBgm.src) {
-      htmlBgm.play().catch(function () {});
+      playHtmlBgm();
     }
     // Soft click so browsers keep the context alive after gesture
     if (!muted) {
@@ -189,7 +193,7 @@
           htmlBgm.pause();
         } catch (_) {}
       } else if (bgmMode && unlocked) {
-        htmlBgm.play().catch(function () {});
+        playHtmlBgm();
       }
     }
     try {
@@ -593,7 +597,7 @@
     let step = 0;
     const intervalMs = 520;
     const timer = setInterval(function () {
-      if (!bgmNodes || muted || !unlocked) return;
+      if (!bgmNodes || muted || !unlocked || pageHidden) return;
       const f = arp[step % arp.length];
       step += 1;
       try {
@@ -629,9 +633,8 @@
       htmlBgm.muted = muted;
       applyBgmLevels(duck);
       if (unlocked && !muted && htmlBgm.paused) {
-        htmlBgm.play().catch(function () {
-          /* keep silent / procedural fallback only if nothing playing */
-        });
+        /* keep silent / procedural fallback only if nothing playing */
+        playHtmlBgm();
       }
     }
 
@@ -715,6 +718,54 @@
     stopProceduralBgm();
     stopHtmlBgm(true);
     bgmMode = null;
+    htmlBgmWasPlaying = false;
+  }
+
+  // Start the file bed, unless the tab is hidden; then it waits for the tab to come back.
+  function playHtmlBgm() {
+    if (!htmlBgm) return;
+    if (pageHidden) {
+      htmlBgmWasPlaying = true;
+      return;
+    }
+    htmlBgm.play().catch(function () {});
+  }
+
+  // Hidden tab: suspend Web Audio (pad, arpeggio, SFX) and pause the file bed. pause() keeps
+  // currentTime, so the song picks up where it left off. On return, restore only what was
+  // playing before, and keep the file bed silent if the player muted in the meantime.
+  function onVisibilityChange() {
+    if (document.hidden) {
+      if (pageHidden) return;
+      pageHidden = true;
+      ctxWasRunning = !!ctx && ctx.state === 'running';
+      if (ctxWasRunning) {
+        try {
+          ctx.suspend().catch(function () {});
+        } catch (_) {}
+      }
+      htmlBgmWasPlaying = !!htmlBgm && !htmlBgm.paused;
+      if (htmlBgmWasPlaying) {
+        try {
+          htmlBgm.pause();
+        } catch (_) {}
+      }
+      return;
+    }
+    if (!pageHidden) return;
+    pageHidden = false;
+    // Resuming a muted context is silent (master gain is 0) and keeps SFX ready for unmute.
+    if (ctxWasRunning && ctx && ctx.state === 'suspended') {
+      try {
+        ctx.resume().catch(function () {});
+      } catch (_) {}
+    }
+    ctxWasRunning = false;
+    const resumeBgm = htmlBgmWasPlaying;
+    htmlBgmWasPlaying = false;
+    if (resumeBgm && htmlBgm && htmlBgm.src && bgmMode && unlocked && !muted && htmlBgm.paused) {
+      playHtmlBgm();
+    }
   }
 
   // Public aliases matching requested API surface
@@ -771,6 +822,7 @@
   };
 
   bindUnlockOnce();
+  document.addEventListener('visibilitychange', onVisibilityChange);
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', syncMuteButtons);
     document.addEventListener('DOMContentLoaded', syncVolumeSliders);

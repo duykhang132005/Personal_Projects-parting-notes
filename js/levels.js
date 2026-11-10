@@ -365,8 +365,15 @@
     }
   }
 
+  // Returns false when storage is unavailable or full, so callers (like the win flow)
+  // keep going with the in-memory progress instead of throwing.
   function saveProgress(progress) {
-    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+    try {
+      localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   function markCleared(levelId) {
