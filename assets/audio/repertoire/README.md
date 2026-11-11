@@ -1,6 +1,6 @@
 # Repertoire BGM (drop legal tracks here)
 
-In-game music only uses files you place in this folder (or `../fair-harvard.mp3`). Only public-domain tracks or your own recordings belong here.
+These are optional fallback beds; map pages and stages use their own files in `../map/`, `../stages/` and `../carol/`. Only public-domain tracks or your own recordings belong here.
 Do **not** rip Spotify. The HGC2627 playlist is inspiration / listen-along only:
 https://open.spotify.com/playlist/5OHBPowItjFTRPLPkUUiMk
 
@@ -20,8 +20,10 @@ Browsers cannot list folders, so `js/audio.js` tries a fixed list (`BGM_CANDIDAT
 ## Fallback order
 
 1. The bed's own files above.
-2. Adventure and Play: the Title files. Closing Night: the Play, Adventure, then Title files.
-3. `../fair-harvard.mp3`, then `../fair-harvard.ogg`.
+2. Play: the Adventure files. Closing Night: the Play, then Adventure files.
+3. Title only: `../fair-harvard.mp3`, then `../fair-harvard.ogg`. Fair Harvard is the menu theme and never plays on the map or in a stage.
 4. The procedural pad.
+
+Map pages and stages normally use their own excerpts in `../map/` and `../stages/` (see the main README); this list is only the fallback when one of those is missing.
 
 A file that fails to load is remembered as missing for 10 minutes per tab (sessionStorage `pn_bgm_missing_v1`). After adding a track, open a new tab or add `?debug` to the URL, which skips this memory. Mute still silences BGM + SFX.

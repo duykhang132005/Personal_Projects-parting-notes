@@ -1,4 +1,4 @@
-/* Parting Notes — title / adventure / play loop */
+/* Parting Notes: title / adventure / play loop */
 (function () {
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
@@ -251,10 +251,18 @@
     state.paused = true;
     hideOnboarding();
     PNUI.showScreen('adventure');
-    const a = audio();
-    if (a && a.bgmStart) a.bgmStart('adventure');
     if (keepPage !== true && PNUI.selectNextUnclearedPage) PNUI.selectNextUnclearedPage();
     PNUI.renderAdventure(startLevel);
+    playMapMusic();
+  }
+
+  // Each map page has its own excerpt; paging switches it (same file: no restart).
+  function playMapMusic() {
+    const a = audio();
+    if (!a || !a.bgmStart) return;
+    const page = PNUI.getAdventurePage ? PNUI.getAdventurePage() : 0;
+    const track = PNLevels.pageTrackUrl ? PNLevels.pageTrackUrl(page) : null;
+    a.bgmStart('adventure', track ? { track } : null);
   }
 
   let dictReturn = 'title';
@@ -305,9 +313,13 @@
     const toName = document.getElementById('transition-to-name');
     const body = document.getElementById('transition-body');
     const cont = document.getElementById('btn-transition-continue');
-    if (kicker) kicker.textContent = 'Movement ' + ((cleared && cleared.index) + 1) + ' → ' + ((next && next.index) + 1);
+    if (kicker) {
+      kicker.textContent = cleared && cleared.act && next && next.act
+        ? 'Stave ' + (cleared.actIndex + 1) + ' → ' + (next.actIndex + 1)
+        : 'Movement ' + ((cleared && cleared.index) + 1) + ' → ' + ((next && next.index) + 1);
+    }
     if (title) title.textContent = 'Stage cleared';
-    if (fromEl) fromEl.textContent = cleared ? cleared.name + ' — done' : '';
+    if (fromEl) fromEl.textContent = cleared ? cleared.name + ': done' : '';
     if (toName) toName.textContent = next ? next.name : '';
     if (body) body.textContent = next ? (next.blurb || 'The path continues.') : '';
     if (cont) {
@@ -327,8 +339,9 @@
     if (body) {
       body.textContent =
         'You walked the choir from the lawn to Closing Night and held the stage ' +
-        'against jazz, folk, and conductor Andy Clark. Andy joins the choir — ' +
-        'hire him from the shop on your next run. The house is on its feet.';
+        'against jazz, folk, and conductor Andy Clark. Andy joins the choir: ' +
+        'hire him from the shop on your next run. The house is on its feet. ' +
+        'A Christmas Carol is now open on the last map page.';
     }
     PNUI.showScreen('congrats');
     const a = audio();
@@ -336,6 +349,39 @@
       if (a.bgmStart) a.bgmStart('title');
       a.win();
     }
+  }
+
+  // ---- Board fit and the shop drawer ----
+  // The board takes the height left under the header and controls (width follows, 6:5).
+  function fitBoard() {
+    const scr = document.getElementById('screen-play');
+    const stack = canvas.parentElement;
+    if (!scr || scr.hidden || !stack) return;
+    const top = stack.getBoundingClientRect().top + window.scrollY;
+    const h = Math.max(240, Math.floor(window.innerHeight - top - 14));
+    scr.style.setProperty('--board-h', h + 'px');
+  }
+  window.addEventListener('resize', fitBoard);
+
+  function isNarrow() {
+    return !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches);
+  }
+
+  let drawerOpen = true;
+  function setDrawer(open, focusToggle) {
+    drawerOpen = !!open;
+    const drawer = document.getElementById('play-drawer');
+    const body = document.getElementById('drawer-body');
+    const btn = document.getElementById('btn-drawer');
+    if (!drawer || !body || !btn) return;
+    // Closing while focus is inside: put focus on the toggle so it is not lost.
+    if (!drawerOpen && body.contains(document.activeElement)) focusToggle = true;
+    body.hidden = !drawerOpen;
+    drawer.classList.toggle('is-open', drawerOpen);
+    btn.setAttribute('aria-expanded', drawerOpen ? 'true' : 'false');
+    const label = btn.querySelector('[data-drawer-label]');
+    if (label) label.textContent = drawerOpen ? 'Hide shop' : 'Show shop';
+    if (focusToggle) btn.focus();
   }
 
   function startLevel(levelId) {
@@ -376,10 +422,16 @@
 
     PNUI.resetShopIcons();
     PNUI.showScreen('play');
+    fitBoard();
+    // Phones start with the sheet open too, so the shop is easy to find.
+    setDrawer(true);
     const aBgm = audio();
     if (aBgm && aBgm.bgmStart) {
       const bed = level && (level.id === 'closing' || level.index === 9) ? 'closing' : 'play';
-      aBgm.bgmStart(bed);
+      // Every stage brings its own excerpt (Carol staves their movement); it loads only now,
+      // and a missing file falls back to the play bed, never to the menu theme.
+      const track = PNLevels.trackUrl ? PNLevels.trackUrl(level) : null;
+      aBgm.bgmStart(bed, track ? { track } : null);
     }
     PNUI.renderHud(state, director);
     PNUI.syncShop(state);
@@ -533,9 +585,9 @@
       spawnFloat(fxX + 6, fxY + 4, String(Math.round(filtered)), '#f3efe4', 0.55);
     }
 
-    enemy.hp -= filtered;
-    if (enemy.hp <= 0) {
-      enemy.alive = false;
+    const hit = PNRules.applyHit(enemy, filtered);
+    if (!hit.applied) return false;
+    if (hit.killed) {
       state.gold += (enemy.gold || 0) + altoGoldBonus();
       if (a) a.kill();
     }
@@ -671,7 +723,7 @@
     if (!map.canBuild(c, r)) return;
     const key = PNTowers.cellKey(c, r);
     if (state.occupied[key]) return;
-    if (state.gold < def.cost) return;
+    if (!PNRules.canAfford(state.gold, def.cost)) return;
 
     const tower = PNTowers.createTower(type, c, r, map.TILE);
     if (!tower) return;
@@ -709,11 +761,7 @@
   }
 
   function cellFromEvent(ev) {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (ev.clientX - rect.left) * scaleX;
-    const y = (ev.clientY - rect.top) * scaleY;
+    const { x, y } = PNRules.boardPoint(ev.clientX, ev.clientY, canvas.getBoundingClientRect(), canvas);
     return {
       c: Math.floor(x / map.TILE),
       r: Math.floor(y / map.TILE),
@@ -736,6 +784,8 @@
     if (state.occupied[key]) {
       state.selectedTower = state.occupied[key];
       state.selectedType = null;
+      // Upgrades live in the drawer; open it when a placed singer is picked.
+      if (!drawerOpen) setDrawer(true);
       PNUI.syncShop(state);
       return;
     }
@@ -924,11 +974,13 @@
       const a = audio();
       if (a) a.uiClick();
       PNUI.adventurePageDelta(-1);
+      playMapMusic();
     });
     document.getElementById('btn-map-next')?.addEventListener('click', () => {
       const a = audio();
       if (a) a.uiClick();
       PNUI.adventurePageDelta(1);
+      playMapMusic();
     });
     document.getElementById('btn-adv-back')?.addEventListener('click', () => {
       const a = audio();
@@ -1036,9 +1088,13 @@
         if (a) a.uiClick();
         state.selectedType = state.selectedType === id ? null : id;
         if (state.selectedType) state.selectedTower = null;
+        // On phones the sheet covers the board, so tuck it away once a singer is picked.
+        if (state.selectedType && isNarrow()) setDrawer(false, true);
         PNUI.syncShop(state);
       });
     });
+
+    document.getElementById('btn-drawer')?.addEventListener('click', () => setDrawer(!drawerOpen));
 
     document.querySelectorAll('[data-target-mode]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -1174,6 +1230,20 @@
         if (!started && state.status === 'playing') toggleSpeed();
       }
       if (ev.key === 's' || ev.key === 'S') sellSelected();
+      if ((ev.key === 'b' || ev.key === 'B') && !PNRules.isTextEntry(ev.target)) setDrawer(!drawerOpen);
+      // "," and "." buy the selected singer's next left or right upgrade, like the buttons.
+      if (PNRules.upgradeByKey && !PNRules.isTextEntry(ev.target)) {
+        const up = PNRules.upgradeByKey(state, ev.key, PNTowers);
+        if (up) {
+          ev.preventDefault();
+          if (up.ok) {
+            const a = audio();
+            if (a) a.uiClick();
+          }
+          if (up.message) announce(up.message);
+          PNUI.renderHud(state, director);
+        }
+      }
       PNUI.syncShop(state);
       if (director) PNUI.syncControls(state, director);
     });
@@ -1210,7 +1280,10 @@
       } else {
         const next = PNLevels.getNextLevel(currentLevel.id);
         if (next) showLevelTransition(currentLevel, next);
-        else showEnd('Victory', state.message);
+        else {
+          if (currentLevel.act) state.message = 'God bless us, every one. A Christmas Carol is complete.';
+          showEnd('Victory', state.message);
+        }
       }
     }
 
@@ -1220,8 +1293,7 @@
       PNEnemies.updateEnemy(e, map.waypoints, scaled);
       if (e.reachedEnd && !beforeEnd) {
         // Boss leaking costs more lives
-        const leak = e.isBoss ? 5 : 1;
-        state.lives = Math.max(0, state.lives - leak);
+        state.lives = PNRules.applyLifeLeak(state.lives, e.isBoss);
         queueLivesAnnouncement();
         const a = audio();
         if (a) a.lifeLeak();
@@ -1287,6 +1359,43 @@
     PNUI.syncControls(state, director);
   }
 
+  // Speak a short message through the shared live region (cleared first so repeats are read).
+  let announceTimer = 0;
+  function announce(text) {
+    const live = document.getElementById('lives-live');
+    if (!live || !text) return;
+    clearTimeout(announceTimer);
+    live.textContent = '';
+    announceTimer = setTimeout(() => {
+      live.textContent = text;
+    }, 40);
+  }
+
+  // Selected singer: badges over everyone its effects reach, and the same list as text.
+  let announcedSelection = null;
+  function drawSelectionStatuses() {
+    const sel = state.selectedTower && state.towers.includes(state.selectedTower) ? state.selectedTower : null;
+    if (!sel || !PNRules.selectionStatuses) {
+      PNUI.syncStatusPanel(null, []);
+      announcedSelection = null;
+      return;
+    }
+    const st = PNRules.selectionStatuses(sel, state.towers, state.enemies, PNTowers);
+    const lines = PNRules.statusSummary(sel, st);
+    if (PNSprites.drawStatusRow) {
+      // Stunned already has its own badge from drawTower, so rows skip it.
+      const selfIds = st.self.map((x) => x.id).filter((id) => id !== 'stunned');
+      if (selfIds.length) PNSprites.drawStatusRow(ctx, selfIds, sel.x, sel.y - 40, 14);
+      st.allies.forEach((a) => PNSprites.drawStatusRow(ctx, a.statuses.map((x) => x.id), a.tower.x, a.tower.y - 40, 14));
+      st.enemies.forEach((e) => PNSprites.drawStatusRow(ctx, e.statuses.map((x) => x.id), e.enemy.x, e.enemy.y - 26, 12));
+    }
+    PNUI.syncStatusPanel(sel, lines);
+    if (announcedSelection !== sel) {
+      announcedSelection = sel;
+      announce(sel.name + ' selected. ' + (lines.length ? lines.map((l) => l.text).join('. ') + '.' : 'No effects in range.'));
+    }
+  }
+
   function draw() {
     if (state.screen !== 'play' || !map) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1302,7 +1411,7 @@
         const key = PNTowers.cellKey(c, r);
         const def = PNTowers.DEFS[state.selectedType];
         const valid =
-          map.canBuild(c, r) && !state.occupied[key] && def && state.gold >= def.cost;
+          map.canBuild(c, r) && !state.occupied[key] && def && PNRules.canAfford(state.gold, def.cost);
         map.drawPlacementHint(ctx, c, r, valid);
         PNTowers.drawGhost(ctx, state.selectedType, c, r, map.TILE, valid);
       }
@@ -1310,6 +1419,7 @@
 
     for (const e of state.enemies) PNEnemies.drawNote(ctx, e);
     for (const p of state.projectiles) PNProjectiles.drawProjectile(ctx, p);
+    drawSelectionStatuses();
 
     for (const fx of effects) {
       if (fx.kind === 'float') {

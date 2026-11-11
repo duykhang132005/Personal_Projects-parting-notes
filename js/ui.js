@@ -1,4 +1,4 @@
-/* Parting Notes — HUD + shop + adventure map + dictionary */
+/* Parting Notes: HUD + shop + adventure map + dictionary */
 (function (global) {
   function showScreen(name) {
     ['title', 'adventure', 'play', 'congrats', 'transition', 'dictionary'].forEach((id) => {
@@ -33,7 +33,7 @@
     } else if (wave && director) {
       const total = director.totalWaves();
       const cur = director.currentDisplay();
-      if (!director.started) setText(wave, 'Wave: \u2014 / ' + total);
+      if (!director.started) setText(wave, 'Wave: 0 / ' + total);
       else setText(wave, 'Wave: ' + cur + ' / ' + total);
     }
     if (phase && director) {
@@ -88,7 +88,7 @@
     if (!t || !PNTowers.upgradeInfo) {
       btn.disabled = true;
       btn.classList.remove('cant-afford', 'locked');
-      if (nameEl) nameEl.textContent = '—';
+      if (nameEl) nameEl.textContent = '';
       if (costEl) costEl.textContent = '';
       if (pipsEl) pipsEl.textContent = '○○○';
       return;
@@ -117,7 +117,7 @@
     } else if (check.reason === 'gold') {
       btn.title = 'Need ' + info.cost + 'g';
     } else {
-      btn.title = info.name + ' — ' + info.cost + 'g';
+      btn.title = info.name + ', ' + info.cost + 'g';
     }
   }
 
@@ -147,7 +147,7 @@
     const sell = document.getElementById('btn-sell');
     if (sell) {
       const t = state.selectedTower;
-      sell.disabled = !t;
+      sell.disabled = !t || state.status !== 'playing';
       sell.textContent = t
         ? 'Sell (+' + PNTowers.sellValue(t) + 'g)'
         : 'Sell (50%)';
@@ -180,6 +180,38 @@
     }
   }
 
+  // Effects in range: a plain list for the selected singer, rebuilt only when it changes.
+  let statusKey = '';
+  function syncStatusPanel(selected, lines) {
+    const panel = document.getElementById('status-panel');
+    const list = document.getElementById('status-list');
+    if (!panel || !list) return;
+    if (!selected) {
+      if (!panel.hidden) panel.hidden = true;
+      statusKey = '';
+      return;
+    }
+    if (panel.hidden) panel.hidden = false;
+    const key = selected.name + '|' + lines.map((l) => l.id + ':' + l.text).join('|');
+    if (key === statusKey) return;
+    statusKey = key;
+    const icons = (global.PNRules && PNRules.STATUS_ICONS) || {};
+    if (!lines.length) {
+      list.innerHTML = '<li class="status-item status-empty">No auras or effects on this ' + escapeHtml(selected.name) + ' right now.</li>';
+      return;
+    }
+    list.innerHTML = lines
+      .map((l) => {
+        const def = icons[l.id];
+        const svg = def
+          ? '<svg class="status-icon" data-status="' + l.id + '" viewBox="-4 -4 24 24" width="22" height="22" aria-hidden="true" focusable="false">' +
+            '<circle cx="8" cy="8" r="10.5"/><path d="' + def.shape + '"/></svg>'
+          : '';
+        return '<li class="status-item">' + svg + '<span>' + escapeHtml(l.text) + '</span></li>';
+      })
+      .join('');
+  }
+
   function syncControls(state, director) {
     const start = document.getElementById('btn-start');
     const pause = document.getElementById('btn-pause');
@@ -204,13 +236,22 @@
     }
   }
 
-  // —— Adventure node map (outside → in, left → right) ——
+  // == Adventure node map (outside → in, left → right) ==
   // Pages: 1–4 lawn→elevator, 5–7 stage→green room, 8–10 dock→closing
   const MAP_PAGES = [
     { label: 'Outside → Lobby', indices: [0, 1, 2, 3] },
     { label: 'Hall → Encore', indices: [4, 5, 6] },
     { label: 'Backstage → Closing Night', indices: [7, 8, 9] },
+    // A Christmas Carol act: five staves, opened by clearing Closing Night.
+    { label: 'A Christmas Carol', indices: [10, 11, 12, 13, 14], act: 'carol' },
   ];
+  // Encore (endless) sits after Closing Night on this page.
+  const ENCORE_PAGE = MAP_PAGES.findIndex((pg) => pg.indices.includes(9));
+
+  function levelUnlocked(level, progress) {
+    if (PNLevels.isLevelUnlocked) return PNLevels.isLevelUnlocked(level, progress);
+    return level.index < progress.unlocked;
+  }
 
   let adventureMapPage = 0;
   let adventureFocusId = null;
@@ -231,6 +272,10 @@
       if (!unlocked) return 'Clear Closing Night to unlock endless waves.';
       const best = PNStats.getEncoreBest();
       return best > 0 ? 'Best run: ' + best + (best === 1 ? ' wave survived.' : ' waves survived.') : 'No Encore runs recorded yet.';
+    }
+    if (level.act && !unlocked) {
+      const prev = level.actIndex > 0 ? PNLevels.CAROL_LEVELS[level.actIndex - 1] : null;
+      return prev ? 'Clear ' + prev.name + ' to open this stave.' : 'Clear Closing Night to open A Christmas Carol.';
     }
     return PNStats.detailText(PNStats.get(level.id));
   }
@@ -256,8 +301,8 @@
     const body = document.getElementById('records-body');
     if (!body || !global.PNStats) return;
     const progress = PNLevels.loadProgress();
-    const rows = PNLevels.LEVELS.map((level) => {
-      const unlocked = level.index < progress.unlocked;
+    const recordRow = (level) => {
+      const unlocked = levelUnlocked(level, progress);
       const s = PNStats.get(level.id);
       const played = s.clears > 0 || s.losses > 0;
       let best;
@@ -266,7 +311,8 @@
       else best = 'Not cleared';
       const time = unlocked && s.bestTime !== null ? PNStats.formatTime(s.bestTime) : '-';
       return { name: level.name, best, time, clears: played ? String(s.clears) : '-', losses: played ? String(s.losses) : '-', cls: unlocked ? '' : 'locked', id: level.id };
-    });
+    };
+    const rows = PNLevels.LEVELS.map(recordRow);
     const encUnlocked = !!(PNLevels.isEndlessUnlocked && PNLevels.isEndlessUnlocked());
     const eb = PNStats.getEncoreBest();
     rows.push({
@@ -278,6 +324,7 @@
       cls: 'endless' + (encUnlocked ? '' : ' locked'),
       id: 'endless',
     });
+    (PNLevels.CAROL_LEVELS || []).forEach((level) => rows.push(recordRow(level)));
     body.innerHTML = rows.map((r) =>
       '<tr class="' + r.cls + '" data-record="' + r.id + '"><th scope="row">' + escapeHtml(r.name) + '</th><td>' +
       escapeHtml(r.best) + '</td><td>' + r.time + '</td><td>' + r.clears + '</td><td>' + r.losses + '</td></tr>').join('');
@@ -296,7 +343,7 @@
     if (!level) {
       if (nameEl) nameEl.textContent = 'Choose a stage';
       if (blurbEl) {
-        blurbEl.textContent = 'Nodes read left to right — deeper into the building toward closing night.';
+        blurbEl.textContent = 'Nodes read left to right, deeper into the building toward closing night.';
       }
       if (metaEl) metaEl.textContent = '';
       return;
@@ -324,12 +371,14 @@
     }
     if (prevBtn) prevBtn.disabled = adventureMapPage <= 0;
     if (nextBtn) nextBtn.disabled = adventureMapPage >= MAP_PAGES.length - 1;
+    const panel = mapEl.closest('.adv-map-panel');
+    if (panel) panel.classList.toggle('is-carol', page.act === 'carol');
 
     const levels = page.indices
-      .map((i) => PNLevels.LEVELS[i])
+      .map((i) => PNLevels.getLevel(i))
       .filter(Boolean);
-    // Encore (endless) sits after Closing Night on the last page, teased until unlocked.
-    if (adventureMapPage === MAP_PAGES.length - 1 && PNLevels.ENDLESS_LEVEL) {
+    // Encore (endless) sits after Closing Night, teased until unlocked.
+    if (adventureMapPage === ENCORE_PAGE && PNLevels.ENDLESS_LEVEL) {
       levels.push(PNLevels.ENDLESS_LEVEL);
     }
 
@@ -367,7 +416,7 @@
     levels.forEach((level) => {
       const unlocked = level.endless
         ? !!(PNLevels.isEndlessUnlocked && PNLevels.isEndlessUnlocked())
-        : level.index < progress.unlocked;
+        : levelUnlocked(level, progress);
       const cleared = !level.endless && progress.cleared.includes(level.id);
       const summary = stageNodeSummary(level, unlocked);
       const btn = document.createElement('button');
@@ -375,6 +424,7 @@
       btn.className =
         'adv-node' +
         (level.endless ? ' endless' : '') +
+        (level.act ? ' carol' : '') +
         (cleared ? ' cleared' : '') +
         (!unlocked ? ' locked' : '');
       btn.disabled = !unlocked;
@@ -382,7 +432,7 @@
       btn.dataset.levelId = level.id;
       btn.innerHTML =
         '<span class="adv-node-orb">' +
-        (level.endless ? '<span aria-hidden="true">∞</span>' : level.index + 1) +
+        (level.endless ? '<span aria-hidden="true">∞</span>' : level.act ? level.actIndex + 1 : level.index + 1) +
         '</span><span class="adv-node-name">' +
         level.name +
         '</span><span class="adv-node-state">' +
@@ -417,7 +467,7 @@
 
     if (!focusLevel && levels[0]) {
       focusLevel = levels[0];
-      focusUnlocked = focusLevel.index < progress.unlocked;
+      focusUnlocked = levelUnlocked(focusLevel, progress);
       focusCleared = progress.cleared.includes(focusLevel.id);
     }
     if (focusLevel) {
@@ -430,12 +480,18 @@
     }
   }
 
-  // Pick the map page with the first stage that has not been cleared (Closing Night when all are
-  // cleared) and highlight that node. Does not render or move keyboard focus.
+  // Pick the map page with the first stage that has not been cleared and highlight that node.
+  // After Closing Night that is the next open Carol stave (Christmas Morning once the act is
+  // done too). Does not render or move keyboard focus.
   function selectNextUnclearedPage() {
     const progress = PNLevels.loadProgress();
     const all = PNLevels.LEVELS;
-    const target = all.find((lv) => !progress.cleared.includes(lv.id)) || all[all.length - 1];
+    const carol = (PNLevels.CAROL_LEVELS || []).filter((lv) => levelUnlocked(lv, progress));
+    const target =
+      all.find((lv) => !progress.cleared.includes(lv.id)) ||
+      carol.find((lv) => !progress.cleared.includes(lv.id)) ||
+      carol[carol.length - 1] ||
+      all[all.length - 1];
     if (!target) return null;
     for (let p = 0; p < MAP_PAGES.length; p++) {
       if (MAP_PAGES[p].indices.includes(target.index)) {
@@ -467,46 +523,47 @@
     }
   }
 
-  // —— Dictionary / Codex ——
+  // == Dictionary / Codex ==
   let dictTab = 'singers';
 
-  const SINGER_BLURBS = {
-    soprano: {
-      role: 'Solo lead',
-      ability:
-        'Single-target lead. Tone path unlocks chain: Echo → Cascade → Vibrato. Melody prefers a different note type when chaining.',
-      paths:
-        'Breath: Breath Control → Passing Tone → Melody. Tone: Echo → Cascade → Vibrato.',
-    },
-    alto: {
-      role: 'Chip · buff aura',
-      ability:
-        'Soft chip plus a nearby aura. Articulate raises gold-per-kill; Harmony assists Jazz/Folk allies in aura.',
-      paths:
-        'Support: Breath Support → Blend → Harmony. Edge: Articulate → Pierce → Morale Boost.',
-    },
-    tenor: {
-      role: 'Splash AoE',
-      ability:
-        'Splash crowd control. Project slows splash hits; Countermelody rewards clusters; Crescendo builds a powered shot.',
-      paths:
-        'Vowels: Tall Vowels → Open Vowels → Project. Line: Clear Cut → Countermelody → Crescendo.',
-    },
-    bass: {
-      role: 'Sniper · infinite range',
-      ability:
-        'Always in range. Tempo path accelerates fire (pierce at Steady Tempo). Fermata slows and punishes heavy notes.',
-      paths:
-        'Tempo: On Beat → Precise Rhythm → Steady Tempo. Weight: Downbeat → Drone → Fermata.',
-    },
-    andy: {
-      role: 'Cue · support sniper',
-      ability:
-        'Expensive long-range support. Modest single-target damage; each hit pulses a cue that stuns nearby notes. Weak vs packs on purpose.',
-      paths:
-        'Cue: Cue Reach → Wider Cue → Full House. Baton: Baton Tap → Downbeat → Curtain Call.',
-    },
+  // Short role tag per singer. The body, base stats and every upgrade line come from PNSkills,
+  // which reads js/towers.js, so the numbers always match the game.
+  const SINGER_ROLES = {
+    soprano: 'Solo lead',
+    alto: 'Chip · buff aura',
+    tenor: 'Splash AoE',
+    bass: 'Sniper · infinite range',
+    andy: 'Cue · support sniper',
   };
+
+  function skillPathsHtml(id) {
+    if (!global.PNSkills) return '';
+    const info = PNSkills.forTower(id);
+    return (
+      '<p class="dict-body">' + escapeHtml(info.role) + '</p>' +
+      '<p class="dict-stats">' + info.base.map(escapeHtml).join(' · ') + '</p>' +
+      '<div class="dict-skill-paths">' +
+      info.paths
+        .map((p) =>
+          '<section class="dict-skill-path" aria-label="' + escapeHtml(p.label) + ' path">' +
+          '<h4 class="dict-skill-path-title">' + escapeHtml(p.label) + ' path</h4>' +
+          '<ol class="dict-skills">' +
+          p.tiers
+            .map((t) =>
+              '<li class="dict-skill">' +
+              '<p class="dict-skill-head"><span class="dict-skill-tier">Tier ' + t.tier + '</span>' +
+              '<strong class="dict-skill-name">' + escapeHtml(t.name) + '</strong>' +
+              '<span class="dict-skill-cost">' + t.cost + 'g</span></p>' +
+              '<p class="dict-skill-what">' + escapeHtml(t.what) + '</p>' +
+              (t.nums.length ? '<p class="dict-skill-nums">' + t.nums.map(escapeHtml).join('; ') + '</p>' : '') +
+              (t.note ? '<p class="dict-skill-note">' + escapeHtml(t.note) + '</p>' : '') +
+              '</li>')
+            .join('') +
+          '</ol></section>')
+        .join('') +
+      '</div>'
+    );
+  }
 
   function singerCardsHtml() {
     const order =
@@ -519,7 +576,6 @@
         const unlocked =
           !def.unlockId ||
           (PNLevels.isTowerUnlocked ? PNLevels.isTowerUnlocked(id) : false);
-        const blurb = SINGER_BLURBS[id] || { role: '', ability: '', paths: '' };
         if (!unlocked) {
           return (
             '<article class="dict-card dict-locked" data-dict-singer="' +
@@ -536,12 +592,12 @@
             '<p class="dict-role">Locked</p>' +
             '<p class="dict-cost">Unlock: clear Closing Night</p>' +
             '</div></div>' +
-            '<p class="dict-body">Choir Andy — cue-stun support sniper. Clear Closing Night to hire him from the shop.</p>' +
+            '<p class="dict-body">Choir Andy, a cue-stun support sniper. Clear Closing Night to hire him from the shop and see his upgrades.</p>' +
             '</article>'
           );
         }
         return (
-          '<article class="dict-card" data-dict-singer="' +
+          '<article class="dict-card wide dict-singer" data-dict-singer="' +
           id +
           '">' +
           '<div class="dict-card-top">' +
@@ -553,18 +609,13 @@
           def.name +
           '</h3>' +
           '<p class="dict-role">' +
-          blurb.role +
+          (SINGER_ROLES[id] || '') +
           '</p>' +
           '<p class="dict-cost">' +
           def.cost +
           'g</p>' +
           '</div></div>' +
-          '<p class="dict-body">' +
-          blurb.ability +
-          '</p>' +
-          '<p class="dict-paths">' +
-          blurb.paths +
-          '</p>' +
+          skillPathsHtml(id) +
           '</article>'
         );
       })
@@ -577,7 +628,7 @@
     const jazzCap = (PNEnemies && PNEnemies.JAZZ_CAP) || 10;
     const folkMin = (PNEnemies && PNEnemies.FOLK_MIN) || 20;
     const noteBlurbs = {
-      eighth: 'Fast, frail runner — packs of eighths rush the path.',
+      eighth: 'Fast, frail runner: packs of eighths rush the path.',
       quarter: 'Standard note. Balanced HP and speed.',
       half: 'Sturdy mid-tempo note. Needs sustained fire.',
       whole: 'Slow tank. Soak damage and threaten lives if they leak.',
@@ -619,7 +670,7 @@
       '<h3>Jazz</h3>' +
       '<p class="dict-role">Style</p>' +
       '</div></div>' +
-      '<p class="dict-body">Glittery notes shrug heavy hits — each hit\'s damage is capped at <strong>JAZZ_CAP (' +
+      '<p class="dict-body">Glittery notes shrug heavy hits: each hit\'s damage is capped at <strong>JAZZ_CAP (' +
       jazzCap +
       ')</strong>. Prefer steady chip DPS over huge single strikes.</p>' +
       '</article>';
@@ -632,7 +683,7 @@
       '<h3>Folk</h3>' +
       '<p class="dict-role">Style</p>' +
       '</div></div>' +
-      '<p class="dict-body">Earthy notes ignore light hits — damage below <strong>FOLK_MIN (' +
+      '<p class="dict-body">Earthy notes ignore light hits: damage below <strong>FOLK_MIN (' +
       folkMin +
       ')</strong> deals 0. Bring Bass, Tenor splash, or upgraded Damage paths.</p>' +
       '</article>';
@@ -725,6 +776,7 @@
     renderRecords,
     syncShop,
     syncControls,
+    syncStatusPanel,
     paintShopIcons,
     resetShopIcons,
     renderAdventure,

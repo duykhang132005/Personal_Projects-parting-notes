@@ -1,0 +1,8 @@
+{
+  "name": "parting-notes",
+  "private": true,
+  "description": "Choir tower-defense game in vanilla HTML, CSS and JS.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

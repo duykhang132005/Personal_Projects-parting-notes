@@ -1,4 +1,4 @@
-/* Parting Notes — procedural Web Audio SFX + optional repertoire BGM */
+/* Parting Notes: procedural Web Audio SFX + optional repertoire BGM */
 (function (global) {
   const MUTE_KEY = 'parting-notes-mute';
   // Background music level (0 to 100), set by the Music volume slider next to Mute.
@@ -475,7 +475,7 @@
     return false;
   }
 
-  function probeUrl(url, done) {
+  function probeUrl(url, done, timeoutMs) {
     if (missedUrls[url]) {
       done(null);
       return;
@@ -500,7 +500,7 @@
     a.src = url;
     setTimeout(function () {
       if (!settled) finish(a.readyState >= 1);
-    }, 450);
+    }, timeoutMs || 450);
   }
 
   function probeList(list, done) {
@@ -522,13 +522,15 @@
   function candidatesFor(mode) {
     const m = mode === 'play' || mode === 'adventure' || mode === 'closing' ? mode : 'title';
     const primary = (BGM_CANDIDATES[m] || []).slice();
+    // Fair Harvard and the other menu files belong to the title bed only; the map and stages
+    // fall back to each other and then to the soft procedural pad.
     const chain =
       m === 'closing'
-        ? primary.concat(BGM_CANDIDATES.play || [], BGM_CANDIDATES.adventure || [], BGM_CANDIDATES.title || [], BGM_FALLBACK)
+        ? primary.concat(BGM_CANDIDATES.play || [], BGM_CANDIDATES.adventure || [])
         : m === 'play'
-          ? primary.concat(BGM_CANDIDATES.title || [], BGM_FALLBACK)
+          ? primary.concat(BGM_CANDIDATES.adventure || [])
           : m === 'adventure'
-            ? primary.concat(BGM_CANDIDATES.title || [], BGM_FALLBACK)
+            ? primary
             : primary.concat(BGM_FALLBACK);
     const seen = {};
     const out = [];
@@ -555,6 +557,25 @@
       trackCache[key] = url || false;
       done(url || null);
     });
+  }
+
+  // A stage's own track (the Carol act) is probed only when that stage starts. Found tracks are
+  // cached; a missing file is remembered by probeUrl and the normal bed for the mode plays.
+  // The longer wait gives a phone time to read the file's header before falling back.
+  const stageTrackCache = {}; // url -> true
+  function findStageTrack(url, mode, done) {
+    if (stageTrackCache[url]) {
+      done(url);
+      return;
+    }
+    probeUrl(url, function (ok) {
+      if (ok) {
+        stageTrackCache[url] = true;
+        done(url);
+        return;
+      }
+      findTrack(mode, done);
+    }, 2500);
   }
 
   function startProceduralPad(duck) {
@@ -620,11 +641,16 @@
     bgmNodes = nodes;
   }
 
-  function bgmStart(mode) {
+  // opts.track: optional file for this stage (for example a Carol movement), tried before the
+  // mode's usual candidates.
+  let bgmRequest = 0;
+  function bgmStart(mode, opts) {
     ensureCtx();
     const next =
       mode === 'play' || mode === 'adventure' || mode === 'closing' ? mode : 'title';
     const duck = next === 'play' || next === 'closing';
+    const stageTrack = opts && typeof opts.track === 'string' && opts.track ? opts.track : null;
+    const request = ++bgmRequest;
     bgmMode = next;
     applyBgmLevels(duck);
 
@@ -673,12 +699,13 @@
       }
     }
 
-    findTrack(next, function (url) {
-      if (bgmMode !== next) return;
+    const onTrack = function (url) {
+      // A newer bgmStart (another screen or stage) wins.
+      if (bgmMode !== next || request !== bgmRequest) return;
       applyBgmLevels(duck);
 
       if (url) {
-        // Same song already running — only retune volume for the new backdrop.
+        // Same song already running: only retune volume for the new backdrop.
         if (sameBgmUrl(url) && htmlBgm && !htmlBgm.paused) {
           stopProceduralBgm();
           ensurePlayingHtml();
@@ -695,7 +722,7 @@
         return;
       }
 
-      // No file — procedural pad; do not restart if already running.
+      // No file: procedural pad; do not restart if already running.
       if (bgmNodes) {
         applyBgmLevels(duck);
         return;
@@ -711,7 +738,9 @@
         };
         document.addEventListener('pointerdown', wait, true);
       }
-    });
+    };
+    if (stageTrack) findStageTrack(stageTrack, next, onTrack);
+    else findTrack(next, onTrack);
   }
 
   function bgmStop() {
@@ -819,6 +848,7 @@
     },
     bgmStart: bgmStart,
     bgmStop: bgmStop,
+    bgmCandidates: candidatesFor,
   };
 
   bindUnlockOnce();

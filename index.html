@@ -3,12 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Parting Notes — a music-themed tower defense" />
+  <meta name="description" content="Parting Notes: a music-themed tower defense" />
   <title>Parting Notes</title>
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
 </head>
 <body>
+  <noscript>
+    <p class="noscript-msg">Parting Notes needs JavaScript to run. Turn on JavaScript in your browser settings, then reload the page.</p>
+  </noscript>
   <div id="app">
 
     <!-- Title -->
@@ -29,6 +32,7 @@
           </button>
         </div>
         <p class="title-credit">Inspired by Harvard Glee Club repertoire · <a href="https://open.spotify.com/playlist/5OHBPowItjFTRPLPkUUiMk" target="_blank" rel="noopener noreferrer">HGC2627 on Spotify<span class="visually-hidden"> (opens in a new tab)</span></a> (listen-along; in-game uses only files you add)</p>
+        <p class="title-credit">Music in A Christmas Carol: Harvard Glee Club course recordings.</p>
         <div class="title-sound">
           <button type="button" class="mute-btn title-mute" data-mute-btn aria-pressed="false" title="Mute sound">Mute</button>
           <div class="volume-stack">
@@ -117,10 +121,10 @@
         <p class="record-badge" id="congrats-record" data-record-badge role="status" hidden></p>
         <p class="congrats-body">
           You walked the choir from the lawn to Closing Night and held the stage
-          against jazz, folk, and conductor Andy Clark. Andy joins the choir —
+          against jazz, folk, and conductor Andy Clark. Andy joins the choir:
           hire him from the shop on your next run. The house is on its feet.
         </p>
-        <p class="congrats-sub">Parting Notes — adventure complete.</p>
+        <p class="congrats-sub">Parting Notes: adventure complete.</p>
         <div class="congrats-actions">
           <button type="button" class="shop-btn active" id="btn-congrats-adventure">Adventure</button>
           <button type="button" class="shop-btn" id="btn-congrats-title">Title</button>
@@ -156,12 +160,23 @@
         <div class="hud" id="hud">
           <span data-hud="lives">Lives: 20</span>
           <span data-hud="gold">Gold: 120</span>
-          <span data-hud="wave">Wave: — / 10</span>
+          <span data-hud="wave">Wave: 0 / 10</span>
           <span data-hud="phase" class="phase">Build · press Start</span>
         </div>
       </header>
 
       <main class="stage-wrap">
+        <p class="visually-hidden" id="lives-live" role="status" aria-live="polite"></p>
+        <div class="controls" role="group" aria-label="Game controls">
+          <button type="button" class="ctrl-btn" id="btn-start">Start wave</button>
+          <button type="button" class="ctrl-btn" id="btn-pause">Pause</button>
+          <button type="button" class="ctrl-btn" id="btn-speed" aria-pressed="false">Speed ×1</button>
+          <button type="button" class="ctrl-btn" id="btn-restart-stage" aria-haspopup="dialog">Restart</button>
+          <button type="button" class="ctrl-btn" id="btn-sell" disabled>Sell (50%)</button>
+          <button type="button" class="ctrl-btn mute-btn" data-mute-btn aria-pressed="false" title="Mute sound">Mute</button>
+          <button type="button" class="ctrl-btn play-help-btn" id="btn-play-help" title="Controls, tips and volume" aria-haspopup="dialog">Help</button>
+        </div>
+
         <div class="canvas-stack">
           <canvas id="game" width="768" height="640" aria-label="Parting Notes playfield"></canvas>
           <div id="end-overlay" class="end-overlay" hidden>
@@ -174,98 +189,83 @@
               </div>
             </div>
           </div>
-        </div>
+          <!-- Shop and selected-singer panels, laid over the board. A side drawer on wide screens and
+               a bottom sheet on phones; the toggle (or B) shows and hides it. -->
+          <aside class="play-drawer" id="play-drawer" aria-label="Shop and selected singer">
+            <button type="button" class="ctrl-btn drawer-toggle" id="btn-drawer" aria-expanded="true" aria-controls="drawer-body" aria-keyshortcuts="B"><span data-drawer-label>Hide shop</span> <kbd class="upgrade-key" aria-hidden="true">B</kbd></button>
+            <div class="drawer-body" id="drawer-body">
+                <div class="shop" role="toolbar" aria-label="Voice parts">
+                  <button type="button" class="shop-btn" data-tower="soprano" title="Solo lead, chain via Damage upgrades (1)">
+                    <canvas class="shop-icon" data-icon="soprano" width="64" height="64" aria-hidden="true"></canvas>
+                    <span class="shop-name">Soprano</span>
+                    <span class="shop-role">Solo</span>
+                    <span class="shop-cost" data-cost="55">55g</span>
+                  </button>
+                  <button type="button" class="shop-btn" data-tower="alto" title="Chip + buff aura; +1 gold per kill each (2)">
+                    <canvas class="shop-icon" data-icon="alto" width="64" height="64" aria-hidden="true"></canvas>
+                    <span class="shop-name">Alto</span>
+                    <span class="shop-role">Buff · +1g/kill</span>
+                    <span class="shop-cost" data-cost="75">75g</span>
+                  </button>
+                  <button type="button" class="shop-btn" data-tower="tenor" title="AoE splash (3)">
+                    <canvas class="shop-icon" data-icon="tenor" width="64" height="64" aria-hidden="true"></canvas>
+                    <span class="shop-name">Tenor</span>
+                    <span class="shop-role">AoE</span>
+                    <span class="shop-cost" data-cost="75">75g</span>
+                  </button>
+                  <button type="button" class="shop-btn" data-tower="bass" title="Sniper (4)">
+                    <canvas class="shop-icon" data-icon="bass" width="64" height="64" aria-hidden="true"></canvas>
+                    <span class="shop-name">Bass</span>
+                    <span class="shop-role">Sniper</span>
+                    <span class="shop-cost" data-cost="100">100g</span>
+                  </button>
+                  <button type="button" class="shop-btn shop-locked" data-tower="andy" title="Cue support sniper (5)" hidden>
+                    <canvas class="shop-icon" data-icon="andy" width="64" height="64" aria-hidden="true"></canvas>
+                    <span class="shop-name">Andy</span>
+                    <span class="shop-role">Cue</span>
+                    <span class="shop-cost" data-cost="190">190g</span>
+                  </button>
+                </div>
+                <div id="target-panel" class="target-panel" hidden>
+                  <span id="target-label" class="target-label">Targets</span>
+                  <div class="target-modes" role="group" aria-label="Targeting mode">
+                    <button type="button" class="ctrl-btn" data-target-mode="front">Front</button>
+                    <button type="button" class="ctrl-btn" data-target-mode="back">Back</button>
+                    <button type="button" class="ctrl-btn" data-target-mode="closest">Closest</button>
+                    <button type="button" class="ctrl-btn" data-target-mode="strongest">Highest HP</button>
+                  </div>
+                </div>
 
-        <p class="visually-hidden" id="lives-live" role="status" aria-live="polite"></p>
-        <div class="controls" role="group" aria-label="Game controls">
-          <button type="button" class="ctrl-btn" id="btn-start">Start wave</button>
-          <button type="button" class="ctrl-btn" id="btn-pause">Pause</button>
-          <button type="button" class="ctrl-btn" id="btn-speed" aria-pressed="false">Speed ×1</button>
-          <button type="button" class="ctrl-btn" id="btn-restart-stage" aria-haspopup="dialog">Restart</button>
-          <button type="button" class="ctrl-btn" id="btn-sell" disabled>Sell (50%)</button>
-          <button type="button" class="ctrl-btn mute-btn" data-mute-btn aria-pressed="false" title="Mute sound">Mute</button>
-          <div class="volume-stack">
-            <label class="music-volume play-volume">
-              <span class="music-volume-label" aria-hidden="true">Music</span>
-              <input type="range" class="music-volume-range" data-music-volume min="0" max="100" step="5" value="100" aria-label="Music volume" aria-valuetext="100%" />
-              <output class="music-volume-out" data-music-volume-out aria-hidden="true">100%</output>
-            </label>
-            <label class="music-volume play-volume">
-              <span class="music-volume-label" aria-hidden="true">Effects</span>
-              <input type="range" class="music-volume-range" data-sfx-volume min="0" max="100" step="5" value="100" aria-label="Sound effects volume" aria-valuetext="100%" />
-              <output class="music-volume-out" data-sfx-volume-out aria-hidden="true">100%</output>
-            </label>
-          </div>
-        </div>
+                <div id="upgrade-panel" class="upgrade-panel" hidden>
+                  <span class="upgrade-heading">Upgrades</span>
+                  <div class="upgrade-cols" role="group" aria-label="Tower upgrades">
+                    <div class="upgrade-col">
+                      <span class="upgrade-path-label" data-upgrade-path-label="range">Breath</span>
+                      <span class="upgrade-pips" data-upgrade-pips="range" aria-hidden="true">○○○</span>
+                      <button type="button" class="ctrl-btn upgrade-btn" data-upgrade="range" aria-keyshortcuts=",">
+                        <span class="upgrade-name" data-upgrade-name="range">Breath Control</span>
+                        <span class="upgrade-cost" data-upgrade-cost="range">30g</span>
+                        <kbd class="upgrade-key" aria-hidden="true">,</kbd>
+                      </button>
+                    </div>
+                    <div class="upgrade-col">
+                      <span class="upgrade-path-label" data-upgrade-path-label="damage">Tone</span>
+                      <span class="upgrade-pips" data-upgrade-pips="damage" aria-hidden="true">○○○</span>
+                      <button type="button" class="ctrl-btn upgrade-btn" data-upgrade="damage" aria-keyshortcuts=".">
+                        <span class="upgrade-name" data-upgrade-name="damage">Echo</span>
+                        <span class="upgrade-cost" data-upgrade-cost="damage">35g</span>
+                        <kbd class="upgrade-key" aria-hidden="true">.</kbd>
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
-        <div id="target-panel" class="target-panel" hidden>
-          <span id="target-label" class="target-label">Targets</span>
-          <div class="target-modes" role="group" aria-label="Targeting mode">
-            <button type="button" class="ctrl-btn" data-target-mode="front">Front</button>
-            <button type="button" class="ctrl-btn" data-target-mode="back">Back</button>
-            <button type="button" class="ctrl-btn" data-target-mode="closest">Closest</button>
-            <button type="button" class="ctrl-btn" data-target-mode="strongest">Highest HP</button>
-          </div>
-        </div>
-
-        <div id="upgrade-panel" class="upgrade-panel" hidden>
-          <span class="upgrade-heading">Upgrades</span>
-          <div class="upgrade-cols" role="group" aria-label="Tower upgrades">
-            <div class="upgrade-col">
-              <span class="upgrade-path-label" data-upgrade-path-label="range">Breath</span>
-              <span class="upgrade-pips" data-upgrade-pips="range" aria-hidden="true">○○○</span>
-              <button type="button" class="ctrl-btn upgrade-btn" data-upgrade="range">
-                <span class="upgrade-name" data-upgrade-name="range">Breath Control</span>
-                <span class="upgrade-cost" data-upgrade-cost="range">30g</span>
-              </button>
+                <div id="status-panel" class="status-panel" hidden>
+                  <span class="status-heading" id="status-heading">Effects in range</span>
+                  <ul class="status-list" id="status-list" aria-labelledby="status-heading"></ul>
+                </div>
             </div>
-            <div class="upgrade-col">
-              <span class="upgrade-path-label" data-upgrade-path-label="damage">Tone</span>
-              <span class="upgrade-pips" data-upgrade-pips="damage" aria-hidden="true">○○○</span>
-              <button type="button" class="ctrl-btn upgrade-btn" data-upgrade="damage">
-                <span class="upgrade-name" data-upgrade-name="damage">Echo</span>
-                <span class="upgrade-cost" data-upgrade-cost="damage">35g</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="shop" role="toolbar" aria-label="Voice parts">
-          <button type="button" class="shop-btn" data-tower="soprano" title="Solo lead — chain via Damage upgrades (1)">
-            <canvas class="shop-icon" data-icon="soprano" width="64" height="64" aria-hidden="true"></canvas>
-            <span class="shop-name">Soprano</span>
-            <span class="shop-role">Solo</span>
-            <span class="shop-cost" data-cost="55">55g</span>
-          </button>
-          <button type="button" class="shop-btn" data-tower="alto" title="Chip + buff aura; +1 gold per kill each (2)">
-            <canvas class="shop-icon" data-icon="alto" width="64" height="64" aria-hidden="true"></canvas>
-            <span class="shop-name">Alto</span>
-            <span class="shop-role">Buff · +1g/kill</span>
-            <span class="shop-cost" data-cost="75">75g</span>
-          </button>
-          <button type="button" class="shop-btn" data-tower="tenor" title="AoE splash (3)">
-            <canvas class="shop-icon" data-icon="tenor" width="64" height="64" aria-hidden="true"></canvas>
-            <span class="shop-name">Tenor</span>
-            <span class="shop-role">AoE</span>
-            <span class="shop-cost" data-cost="75">75g</span>
-          </button>
-          <button type="button" class="shop-btn" data-tower="bass" title="Sniper (4)">
-            <canvas class="shop-icon" data-icon="bass" width="64" height="64" aria-hidden="true"></canvas>
-            <span class="shop-name">Bass</span>
-            <span class="shop-role">Sniper</span>
-            <span class="shop-cost" data-cost="100">100g</span>
-          </button>
-          <button type="button" class="shop-btn shop-locked" data-tower="andy" title="Cue support sniper (5)" hidden>
-            <canvas class="shop-icon" data-icon="andy" width="64" height="64" aria-hidden="true"></canvas>
-            <span class="shop-name">Andy</span>
-            <span class="shop-role">Cue</span>
-            <span class="shop-cost" data-cost="190">190g</span>
-          </button>
-        </div>
-
-        <div class="play-footer">
-          <p class="hint hint-compact" id="hint">Place singers · Start wave · click a singer to upgrade</p>
-          <button type="button" class="ctrl-btn play-help-btn" id="btn-play-help" title="Controls and tips">Help</button>
+          </aside>
         </div>
       </main>
 
@@ -302,6 +302,8 @@
               <ul class="help-keys" id="help-keys">
                 <li><kbd>1</kbd> to <kbd>5</kbd>: pick Soprano, Alto, Tenor, Bass or Andy (press again to cancel; 5 once Andy is unlocked).</li>
                 <li><kbd>S</kbd>: sell the selected singer (50% refund).</li>
+                <li><kbd>,</kbd> and <kbd>.</kbd>: buy the selected singer's next left or right path upgrade.</li>
+                <li><kbd>B</kbd>: show or hide the shop panel over the board.</li>
                 <li><kbd>Space</kbd>: start the next wave; during a wave, toggle speed.</li>
                 <li><kbd>Esc</kbd>: pause or resume; closes this dialog.</li>
                 <li id="help-key-debug" hidden><kbd>N</kbd>: on the map, jump to the next uncleared stage (debug only).</li>
@@ -312,18 +314,34 @@
               <ul>
                 <li>Click a placed singer for targeting and two upgrade paths.</li>
                 <li>Crosspath max is <strong>3/2</strong> (or 2/3).</li>
+                <li>A selected singer shows badges over everyone its effects reach, listed under Effects in range.</li>
               </ul>
             </section>
             <section>
               <h3>Notes</h3>
               <ul>
-                <li><strong>Jazz</strong> — glittery; heavy hits get capped.</li>
-                <li><strong>Folk</strong> — needs big damage or the hit does nothing.</li>
+                <li><strong>Jazz</strong>: glittery; heavy hits get capped.</li>
+                <li><strong>Folk</strong>: needs big damage or the hit does nothing.</li>
                 <li>Each Alto adds gold on kills.</li>
-                <li><strong>Closing Night</strong> — conductor Andy Clark cues and stuns the choir.</li>
+                <li><strong>Closing Night</strong>: conductor Andy Clark cues and stuns the choir.</li>
               </ul>
             </section>
           </div>
+          <section class="play-help-sound" aria-labelledby="help-sound-title">
+            <h3 id="help-sound-title">Sound</h3>
+            <div class="volume-stack">
+              <label class="music-volume play-volume">
+                <span class="music-volume-label" aria-hidden="true">Music</span>
+                <input type="range" class="music-volume-range" data-music-volume min="0" max="100" step="5" value="100" aria-label="Music volume" aria-valuetext="100%" />
+                <output class="music-volume-out" data-music-volume-out aria-hidden="true">100%</output>
+              </label>
+              <label class="music-volume play-volume">
+                <span class="music-volume-label" aria-hidden="true">Effects</span>
+                <input type="range" class="music-volume-range" data-sfx-volume min="0" max="100" step="5" value="100" aria-label="Sound effects volume" aria-valuetext="100%" />
+                <output class="music-volume-out" data-sfx-volume-out aria-hidden="true">100%</output>
+              </label>
+            </div>
+          </section>
           <p class="play-help-hint" id="play-help-hint">Hotkeys are paused while Help is open.</p>
           <div class="play-help-stats" id="help-stats">
             <button type="button" class="ctrl-btn" id="btn-help-reset-stats">Reset stats</button>
@@ -345,16 +363,16 @@
         <h2 id="onboard-title" class="onboard-title">Warm-up tips</h2>
 
         <div data-tip-step="0">
-          <p class="onboard-body"><strong>1. Pick Soprano</strong> — tap the Soprano seat in the shop (hotkey <kbd>1</kbd>). She hits one note at a time; buy Damage upgrades to unlock chain echoes.</p>
+          <p class="onboard-body"><strong>1. Pick Soprano</strong>: tap the Soprano seat in the shop (hotkey <kbd>1</kbd>). She hits one note at a time; buy Damage upgrades to unlock chain echoes.</p>
         </div>
         <div data-tip-step="1" hidden>
-          <p class="onboard-body"><strong>2. Place</strong> — click open grass beside the path. Ghost range shows where she’ll sing.</p>
+          <p class="onboard-body"><strong>2. Place</strong>: click open grass beside the path. Ghost range shows where she’ll sing.</p>
         </div>
         <div data-tip-step="2" hidden>
-          <p class="onboard-body"><strong>3. Start wave</strong> — when the lawn is set, press <strong>Start wave</strong>. Notes march toward the hall.</p>
+          <p class="onboard-body"><strong>3. Start wave</strong>: when the lawn is set, press <strong>Start wave</strong>. Notes march toward the hall.</p>
         </div>
         <div data-tip-step="3" hidden>
-          <p class="onboard-body"><strong>4. Targeting &amp; upgrades</strong> — click a placed singer for targeting and two upgrade paths (crosspath max 3/2; labels like Breath / Tone). Open <strong>Help</strong> anytime for full controls. Later stages tip a hat to Abendlied, Glorious Apollo, and closing-night cues.</p>
+          <p class="onboard-body"><strong>4. Targeting &amp; upgrades</strong>: click a placed singer for targeting and two upgrade paths (crosspath max 3/2; labels like Breath / Tone). Open <strong>Help</strong> anytime for full controls. Later stages tip a hat to Abendlied, Glorious Apollo, and closing-night cues.</p>
         </div>
 
         <div class="onboard-actions">
@@ -373,10 +391,12 @@
   <script src="js/enemies.js"></script>
   <script src="js/projectiles.js"></script>
   <script src="js/towers.js"></script>
+  <script src="js/skills.js"></script>
   <script src="js/waves.js"></script>
   <script src="js/stats.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/audio.js"></script>
+  <script src="js/rules.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

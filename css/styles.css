@@ -46,6 +46,23 @@
   --night-warm: #1a1210;
   --night-ember: #2a1814;
   --night-ember-soft: #241814;
+  /* A Christmas Carol act: winter accents for its map page. */
+  --frost: #e6eef5;
+  --frost-deep: #9fb4c7;
+  --holly: #2f5a3e;
+  /* Status badges over singers and notes (selected-singer view), drawn on the canvas. */
+  --status-badge: var(--night);
+  --status-aura: var(--gold);
+  --status-blend: var(--leaf-light);
+  --status-harmony: var(--sky);
+  --status-stun: var(--gold-light);
+  --status-cue: var(--frost);
+  --status-slow: var(--frost-deep);
+  /* Play layout: the board fills the screen and the shop drawer floats over it. */
+  --drawer-w: 15.5rem;
+  --drawer-bg: rgba(243, 239, 228, 0.96);
+  --drawer-edge: var(--panel-edge);
+  --drawer-shadow: rgba(0, 0, 0, 0.4);
   /* Shared keyboard focus ring: gold on the dark stage, crimson on light cards (see below). */
   --focus-ring: var(--gold);
   --font: Georgia, "Times New Roman", "Segoe UI", system-ui, serif;
@@ -526,6 +543,59 @@ kbd {
 .upgrade-btn:disabled {
   cursor: not-allowed;
 }
+
+/* Keyboard hint on each upgrade button ("," left path, "." right path). */
+.upgrade-btn .upgrade-key {
+  font-size: 0.75rem;
+  min-width: 1.4em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Effects in range: what the selected singer is under and what it gives. Icons match the canvas
+   badges, and every line says the effect in words. */
+.status-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-width: 768px;
+  padding: 0.45rem 0.75rem;
+  background: var(--panel);
+  border: 3px solid var(--panel-edge);
+  border-radius: 6px;
+  color: var(--ink);
+}
+.status-panel[hidden] { display: none !important; }
+.status-heading {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.status-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+}
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.status-empty { color: var(--stone-text); }
+.status-icon { flex-shrink: 0; }
+.status-icon circle { fill: var(--status-badge); stroke-width: 2; }
+.status-icon[data-status="aura"] { color: var(--status-aura); }
+.status-icon[data-status="blend"] { color: var(--status-blend); }
+.status-icon[data-status="harmony"] { color: var(--status-harmony); }
+.status-icon[data-status="stunned"] { color: var(--status-stun); }
+.status-icon[data-status="cue"] { color: var(--status-cue); }
+.status-icon[data-status="slow"] { color: var(--status-slow); }
+.status-icon circle { stroke: currentColor; }
+.status-icon path { fill: currentColor; }
 
 
 .shop-btn {
@@ -1052,7 +1122,7 @@ kbd {
 }
 
 
-/* —— Congrats (finale) —— */
+/* == Congrats (finale) == */
 .screen-congrats {
   display: flex;
   align-items: center;
@@ -1111,7 +1181,7 @@ kbd {
 }
 
 
-/* —— Level transition —— */
+/* == Level transition == */
 .screen-transition {
   display: flex;
   align-items: center;
@@ -1229,7 +1299,7 @@ kbd {
   justify-content: center;
 }
 
-/* —— Mute —— */
+/* == Mute == */
 .mute-btn {
   font-family: var(--font);
   cursor: pointer;
@@ -1330,7 +1400,7 @@ kbd {
   text-align: left;
 }
 
-/* —— First-run onboarding —— */
+/* == First-run onboarding == */
 .onboard-overlay {
   position: fixed;
   inset: 0;
@@ -1580,6 +1650,19 @@ kbd {
 }
 .adv-node.locked .adv-node-state { color: var(--stone-text); }
 
+/* A Christmas Carol page: frosted open staves and a holly label. State text still says Open,
+   Cleared or Locked, so color is never the only cue. */
+.adv-map-panel.is-carol { border-color: var(--frost-deep); }
+.adv-map-panel.is-carol .adv-page-label { color: var(--holly); }
+.adv-node.carol:not(.locked):not(.cleared) .adv-node-orb {
+  background: linear-gradient(180deg, var(--frost), var(--frost-deep));
+}
+/* Five staves share one row, so phones tighten the spacing to stay inside 375px. */
+@media (max-width: 480px) {
+  .adv-map-panel.is-carol .adv-map-nodes { gap: 0.15rem; padding-inline: 0; }
+  .adv-map-panel.is-carol .adv-node { min-width: 0; padding-inline: 0; }
+}
+
 .adv-detail {
   display: flex;
   flex-wrap: wrap;
@@ -1707,7 +1790,7 @@ kbd {
   gap: 0.85rem;
 }
 
-/* display:grid above beats the UA [hidden] rule — force hide inactive tabs */
+/* display:grid above beats the UA [hidden] rule, so force hide inactive tabs */
 .dict-panel[hidden] {
   display: none !important;
 }
@@ -1779,8 +1862,216 @@ kbd {
   grid-column: 1 / -1;
 }
 
+/* Singer cards: base stats, then each upgrade path with one entry per tier. */
+.dict-stats {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-brown);
+  font-variant-numeric: tabular-nums;
+}
+.dict-skill-paths {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem 1rem;
+  padding-top: 0.45rem;
+  border-top: 1px dashed rgba(61, 36, 24, 0.25);
+}
+.dict-skill-path-title {
+  margin: 0 0 0.3rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--crimson);
+}
+.dict-skills {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.dict-skill p { margin: 0; }
+.dict-skill-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.45rem;
+  font-size: 0.9rem;
+}
+.dict-skill-tier {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--stone-text);
+  font-variant-numeric: tabular-nums;
+}
+.dict-skill-cost {
+  margin-left: auto;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--wood);
+  font-variant-numeric: tabular-nums;
+}
+.dict-skill-what {
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+.dict-skill-nums {
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--ink-brown);
+  font-variant-numeric: tabular-nums;
+}
+.dict-skill-note {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--stone-text);
+}
+@media (min-width: 640px) {
+  .dict-skill-paths { grid-template-columns: 1fr 1fr; }
+}
+
 @media (min-width: 640px) {
   .dict-card.wide {
     grid-column: span 2;
   }
+}
+.dict-card.dict-singer { grid-column: 1 / -1; }
+
+.noscript-msg {
+  max-width: 36rem;
+  margin: 3rem auto;
+  padding: 1rem 1.25rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--cream);
+  border: 2px solid var(--panel-edge);
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* ===== Play layout: board first, shop drawer over it ===== */
+/* The play screen uses the whole window width; the board is sized by fitBoard() in main.js,
+   which sets --board-h to the height left under the header and controls. */
+#app:has(> #screen-play:not([hidden])) {
+  max-width: none;
+  padding: 0.5rem 0.75rem 0.75rem;
+}
+.screen-play .top-bar {
+  max-width: 1400px;
+  margin: 0 auto 0.4rem;
+  align-items: center;
+}
+.screen-play .stage-wrap { gap: 0.4rem; }
+.screen-play .controls { gap: 0.35rem; }
+.screen-play .canvas-stack {
+  width: min(100%, calc(var(--board-h, 640px) * 1.2));
+}
+.play-help-sound h3 { margin: 0 0 0.35rem; }
+.play-help-sound { margin-top: 0.75rem; }
+
+.play-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  width: var(--drawer-w);
+  max-width: calc(100% - 1rem);
+  padding: 0.4rem;
+  pointer-events: none;
+}
+.play-drawer > * { pointer-events: auto; }
+.end-overlay { z-index: 3; }
+.drawer-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.25rem;
+  box-shadow: 0 3px 8px var(--drawer-shadow);
+}
+.drawer-body {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.4rem;
+  background: var(--drawer-bg);
+  border: 3px solid var(--drawer-edge);
+  border-radius: 8px;
+  box-shadow: 0 8px 20px var(--drawer-shadow);
+  color: var(--ink);
+}
+.drawer-body[hidden] { display: none !important; }
+.play-drawer.is-open .drawer-body { animation: drawer-in 0.16s ease-out; }
+@keyframes drawer-in {
+  from { opacity: 0; transform: translateX(0.75rem); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Panels inside the drawer share its background and stack to its width. */
+.drawer-body .shop {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  max-width: none;
+}
+.drawer-body .shop-btn {
+  min-width: 0;
+  padding: 0.3rem 0.35rem;
+}
+.drawer-body .shop-icon { width: 40px; height: 34px; margin-bottom: 0; }
+.drawer-body .target-panel,
+.drawer-body .upgrade-panel,
+.drawer-body .status-panel {
+  max-width: none;
+  padding: 0.35rem 0.45rem;
+  border-width: 2px;
+}
+.drawer-body .target-panel { justify-content: flex-start; }
+.drawer-body .upgrade-cols { flex-direction: column; width: 100%; gap: 0.4rem; }
+.drawer-body .upgrade-col { min-width: 0; width: 100%; }
+.drawer-body .upgrade-btn { min-width: 0; width: 100%; }
+.drawer-body .status-list { flex-direction: column; }
+
+/* Phones: the drawer becomes a bottom sheet over the lower part of the screen. */
+@media (max-width: 720px) {
+  .screen-play .top-bar { gap: 0.4rem; }
+  .screen-play .hud { gap: 0.3rem 0.7rem; padding: 0.35rem 0.6rem; font-size: 1rem; }
+  .play-drawer {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-width: none;
+    max-height: min(48vh, 22rem);
+    padding: 0 0.5rem 0.5rem;
+  }
+  .drawer-body { max-height: calc(min(48vh, 22rem) - 3rem); }
+  .drawer-body .shop {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+  .drawer-body .shop-btn { flex: 0 0 5.6rem; min-height: 44px; }
+  .drawer-body .upgrade-cols { flex-direction: row; }
+  .drawer-body .upgrade-col { flex: 1 1 0; }
+  .play-drawer.is-open .drawer-body { animation-name: sheet-in; }
+  @keyframes sheet-in {
+    from { opacity: 0; transform: translateY(0.75rem); }
+    to { opacity: 1; transform: none; }
+  }
+  .screen-play .ctrl-btn { min-height: 44px; }
 }

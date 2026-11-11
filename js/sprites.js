@@ -1,4 +1,4 @@
-/* Parting Notes — smooth 64-bit style sprites (canvas vector) */
+/* Parting Notes: smooth 64-bit style sprites (canvas vector) */
 (function (global) {
   function roundRect(ctx, x, y, w, h, r) {
     const rr = Math.min(r, w / 2, h / 2);
@@ -243,7 +243,7 @@
 
   function drawPart(ctx, typeId, cx, cy, selected, scaleOpt) {
     const scale = scaleOpt || 1;
-    // Choir Andy shop/dict portrait — smaller than boss sprite.
+    // Choir Andy shop/dict portrait, smaller than boss sprite.
     if (typeId === 'andy') {
       if (typeof drawAndyClark === 'function') {
         drawAndyClark(ctx, cx, cy - 2, { scale: 0.72 * scale, flash: false });
@@ -343,7 +343,7 @@
       ctx.arc(0, -14, 5.5, Math.PI, 0);
       ctx.fill();
     } else if (typeId === 'andy') {
-      // dark coat — short hair + gold baton tip accent
+      // dark coat: short hair + gold baton tip accent
       ctx.fillStyle = '#2a1a0c';
       ctx.beginPath();
       ctx.arc(0, -14, 5.5, Math.PI, 0);
@@ -353,7 +353,7 @@
       ctx.arc(8, -10, 2.2, 0, Math.PI * 2);
       ctx.fill();
     } else {
-      // tenor — clean short hair
+      // tenor: clean short hair
       ctx.fillStyle = '#5c3d1e';
       ctx.beginPath();
       ctx.arc(0, -14, 5.5, Math.PI, 0);
@@ -597,7 +597,7 @@
     ctx.restore();
   }
 
-  /** Conductor boss — black tails, white shirt/bow, baton raised. Larger than notes. */
+  /** Conductor boss: black tails, white shirt/bow, baton raised. Larger than notes. */
   function drawAndyClark(ctx, cx, cy, opts) {
     const scale = (opts && opts.scale) || 1.35;
     const flash = opts && opts.flash;
@@ -725,7 +725,60 @@
     }
   }
 
+  // ---- Status badges (shapes and labels live in PNRules.STATUS_ICONS) ----
+  const tokenCache = {};
+  function token(name, fallback) {
+    if (tokenCache[name]) return tokenCache[name];
+    let v = '';
+    try {
+      v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    } catch (_) {}
+    tokenCache[name] = v || fallback;
+    return tokenCache[name];
+  }
+  const pathCache = {};
+  function statusPath(id) {
+    const icons = global.PNRules && PNRules.STATUS_ICONS;
+    const def = icons && icons[id];
+    if (!def || typeof Path2D === 'undefined') return null;
+    if (!pathCache[id]) pathCache[id] = new Path2D(def.shape);
+    return pathCache[id];
+  }
+
+  /** One round badge with the status glyph, centred on (x, y). Still drawing, no animation. */
+  function drawStatusIcon(ctx, id, x, y, size) {
+    const icons = global.PNRules && PNRules.STATUS_ICONS;
+    const def = icons && icons[id];
+    const path = statusPath(id);
+    if (!def || !path) return;
+    const s = size || 16;
+    const tone = token(def.tone, 'white');
+    ctx.save();
+    ctx.fillStyle = token('--status-badge', 'black');
+    ctx.strokeStyle = tone;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, s / 2 + 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.translate(x - s / 2, y - s / 2);
+    ctx.scale(s / 16, s / 16);
+    ctx.fillStyle = tone;
+    ctx.fill(path);
+    ctx.restore();
+  }
+
+  /** A centred row of badges above a unit. */
+  function drawStatusRow(ctx, ids, x, y, size) {
+    const s = size || 16;
+    const gap = s + 9;
+    const start = x - ((ids.length - 1) * gap) / 2;
+    ids.forEach((id, i) => drawStatusIcon(ctx, id, start + i * gap, y, s));
+  }
+
   global.PNSprites = {
+    drawStatusIcon,
+    drawStatusRow,
     drawPart,
     drawPartField,
     drawPartFieldGhost,

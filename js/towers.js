@@ -1,4 +1,4 @@
-/* Parting Notes — voice-part towers */
+/* Parting Notes: voice-part towers */
 (function (global) {
   const TARGET_MODES = [
     { id: 'front', label: 'Front' },
@@ -64,7 +64,7 @@
       kind: 'bass',
       defaultTarget: 'strongest',
     },
-    /** Choir Andy — unlocked after clearing Closing Night. Expensive support sniper. */
+    /** Choir Andy: unlocked after clearing Closing Night. Expensive support sniper. */
     andy: {
       id: 'andy',
       name: 'Andy',
@@ -87,9 +87,12 @@
   const SHOP_ORDER = ORDER_ALL;
 
   // Crosspath rule (classic 2-path feel): each path max 3 tiers; after any upgrade
-  // Math.min(rangeTier, damageTier) <= 2 — i.e. max deep/cross is 3/2 or 2/3.
+  // Math.min(rangeTier, damageTier) <= 2, i.e. max deep/cross is 3/2 or 2/3.
   const UPGRADE_MAX = 3;
   const UPGRADE_CROSS_CAP = 2;
+
+  // Tenor Crescendo: after this many splash hits in a row, the next shot is amplified.
+  const CRESCENDO = { streak: 3, splashMult: 1.55, damageMult: 1.25 };
 
   const UPGRADE_COSTS = {
     range: [30, 65, 120],
@@ -277,7 +280,7 @@
 
     // --- Damage path (right) ---
     if (type === 'soprano') {
-      // Echo / Cascade / Vibrato — unlock and deepen chain.
+      // Echo / Cascade / Vibrato: unlock and deepen chain.
       if (ud >= 1) {
         s.damage += 4;
         s.chainJumps = Math.max(s.chainJumps, 1);
@@ -488,9 +491,9 @@
     let splash = stats.splash || 0;
 
     // Crescendo: after 3 splash hits, next shot is amplified then streak resets.
-    if (stats.crescendo && (tower.crescendoStreak || 0) >= 3) {
-      splash *= 1.55;
-      dmg *= 1.25;
+    if (stats.crescendo && (tower.crescendoStreak || 0) >= CRESCENDO.streak) {
+      splash *= CRESCENDO.splashMult;
+      dmg *= CRESCENDO.damageMult;
       tower.crescendoStreak = 0;
     }
 
@@ -530,7 +533,7 @@
     if (tower.stunTimer > 0) {
       tower.stunTimer -= dt;
       if (tower.cooldown > 0) tower.cooldown -= dt;
-      return; // stunned — cannot fire
+      return; // stunned: cannot fire
     }
     if (tower.cooldown > 0) tower.cooldown -= dt;
     tryFire(tower, enemies, towers, projectiles, waypoints);
@@ -583,7 +586,7 @@
       ctx.fill();
     }
 
-    // stun cue — brief white/gold ring + zap marks
+    // stun cue: brief white/gold ring + zap marks
     if (tower.stunTimer > 0) {
       const a = Math.min(1, tower.stunTimer / 0.5);
       ctx.strokeStyle = 'rgba(232, 197, 71, ' + (0.45 + 0.45 * a) + ')';
@@ -595,11 +598,7 @@
       ctx.beginPath();
       ctx.arc(x, y, 16, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#e8c547';
-      ctx.font = 'bold 14px Georgia, system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('⚡', x, y - 22);
+      if (global.PNSprites && PNSprites.drawStatusIcon) PNSprites.drawStatusIcon(ctx, 'stunned', x, y - 24, 14);
     }
 
     // Tier pips under selected tower
@@ -743,6 +742,7 @@
     SHOP_ORDER,
     TARGET_MODES,
     UPGRADE_COSTS,
+    CRESCENDO,
     UPGRADE_MAX,
     UPGRADE_CROSS_CAP,
     UPGRADE_NAMES_BY_VOICE,

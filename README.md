@@ -1,6 +1,6 @@
 # Parting Notes
 
-A music-themed tower defense. Notes march from the lawn outside the hall to the stage curtain — seat singers (voice parts) to break the phrase before it reaches the finale.
+A music-themed tower defense. Notes march from the lawn outside the hall to the stage curtain. Seat singers (voice parts) to break the phrase before it reaches the finale.
 
 ## Play
 
@@ -10,7 +10,7 @@ Open `index.html` or:
 npx --yes serve .
 ```
 
-**Adventure** has ten stages from the lawn to closing night. Clear a stage to unlock the next (saved in this browser as `parting-notes-progress`).
+**Adventure** has ten stages from the lawn to closing night. Clear a stage to unlock the next (saved in this browser as `parting-notes-progress`). Clearing Closing Night also opens **A Christmas Carol**, a five-stave act on the last map page.
 
 ## Towers
 
@@ -20,11 +20,19 @@ npx --yes serve .
 | Alto | Chip + damage aura; **+1g per kill** base, **+2g** with Articulate. Support path ends in Harmony (Jazz/Folk assist in aura). |
 | Tenor | AoE splash; Line path ends in Crescendo. |
 | Bass | Infinite-range sniper; Tempo path (On Beat → Steady Tempo) + Weight path (Downbeat → Fermata). |
-| Andy | Cue support sniper — **unlocks after clearing Closing Night**. Hotkey 5. |
+| Andy | Cue support sniper, **unlocks after clearing Closing Night**. Hotkey 5. |
 
 Each singer has two upgrade paths (crosspath max **3/2**). Column labels are voice-specific (e.g. Soprano Breath / Tone, Bass Tempo / Weight).
 
 Per-tower targeting: Front / Back / Closest / Highest HP.
+
+**Dictionary:** each singer card lists every upgrade tier on both paths with a short line and its exact numbers (cost, damage, range, rate, chain, splash, aura and so on). The numbers are built from `js/towers.js` at runtime by `js/skills.js`, so they cannot drift from the game.
+
+**Status badges:** click a placed singer to see small badges above every singer or note it affects or is affected by: Aura (Alto damage buff), Blend (Alto assist on Jazz and Folk), Harmony, Tempo (Bass slow), Cue (Andy freezes notes) and Stunned. Each badge has a text line in the selected-singer panel ("Aura: +25% damage (from 1 Alto)") and is announced to screen readers when the selection changes.
+
+## Layout
+
+The board fills most of the window and keeps its shape (scaled to fit, clicks map to the right cell at any size). The shop, targeting, upgrades and status list sit in a drawer over the board: a side panel on desktop, a bottom sheet on phones (375px and up). **Hide shop** / **Show shop** or **B** toggles it. On phones the sheet tucks away when you pick a singer to place and opens again when you select a placed one. Controls and sound sliders live in **Help**. The drawer animation is skipped with reduced motion.
 
 ## Note styles
 
@@ -34,11 +42,27 @@ Per-tower targeting: Front / Back / Closest / Highest HP.
 | Jazz | Glittery; each hit capped (~10 dmg) |
 | Folk | Brown; immune to hits below ~20 dmg |
 
-**Encore (endless):** unlocks with Choir Andy (clear Closing Night, or `?debug`). It sits after Closing Night on the last map page and replays that map with waves that grow forever: more notes, more HP and a little more gold each wave, with Andy Clark every 10th wave. The run ends at 0 lives and shows waves survived and your best (saved as `pn_encore_best_v1`). It never changes stage progress.
+**Encore (endless):** unlocks with Choir Andy (clear Closing Night, or `?debug`). It sits after Closing Night on the third map page and replays that map with waves that grow forever: more notes, more HP and a little more gold each wave, with Andy Clark every 10th wave. The run ends at 0 lives and shows waves survived and your best (saved as `pn_encore_best_v1`). It never changes stage progress.
 
 **Stage stats:** each map node shows a short readout (e.g. "Best 18 lives") and the detail panel lists clears, losses, best lives left and the last losing wave. Saved separately from progress as `pn_stage_stats_v1`. Retrying or quitting to the map counts as neither a clear nor a loss.
 
-**Boss:** Andy Clark (Closing Night) — conductor who periodically stuns all towers. Clear the stage to recruit **Choir Andy** for the shop.
+**Boss:** Andy Clark (Closing Night): conductor who periodically stuns all towers. Clear the stage to recruit **Choir Andy** for the shop.
+
+## A Christmas Carol
+
+A five-stave act on the fourth map page, following Dickens' story. It opens when Closing Night is cleared, and each stave opens when the one before it is cleared. It reuses the existing singers, notes and backdrops, with light snow on every stage.
+
+| Stave | Stage | Music |
+|-------|-------|-------|
+| 1 | Marley's Ghost | Marley's Ghost |
+| 2 | Christmas Past | Fezziwig's Ball |
+| 3 | Christmas Present | The Ghost of Christmas Present |
+| 4 | Yet to Come | Ghost of the Future (Andy Clark returns) |
+| 5 | Christmas Morning | God Bless Us, Every One |
+
+Carol progress is read from the cleared list in `parting-notes-progress`, so older saves keep every stage and nothing new is added to the save. Carol stages have their own stats and Records rows.
+
+Music: A Christmas Carol, Harvard Glee Club course recordings. Each stave loads its own excerpt from `assets/audio/carol/` (MP3, 96 kbps) only when that stage starts. A missing file falls back to the usual play music without an error. The act's map page uses its own track too (see Audio).
 
 ## Records and stats
 
@@ -60,6 +84,8 @@ Per-tower targeting: Front / Back / Closest / Highest HP.
 
 - **1** to **5**: pick Soprano, Alto, Tenor, Bass or Andy (5 once Andy is unlocked); press again to cancel.
 - **S**: sell the selected singer (50% refund).
+- **,** and **.**: buy the selected singer's next left or right path upgrade (same rules as the buttons; only while playing). The result is announced.
+- **B**: show or hide the shop drawer.
 - **Space**: start the next wave; during a wave, toggle speed.
 - **Esc**: pause or resume; closes Help and cancels a confirm.
 - **N** (debug only): on the map, jump to the next uncleared stage.
@@ -84,16 +110,40 @@ Music files found missing are remembered for 10 minutes in sessionStorage as `pn
 
 ## Stack
 
-Vanilla HTML, CSS, and JS. MIT — see [LICENSE](LICENSE).
+Vanilla HTML, CSS, and JS. MIT, see [LICENSE](LICENSE).
+Tests: run `npm test` (or `node --test`). No extra install is required.
 
 ## Audio
 
 - **SFX:** procedural Web Audio (`js/audio.js`).
-- **BGM:** continuous across screens; prefers legal files in `assets/audio/repertoire/`, then `fair-harvard.mp3`, then a soft procedural pad. Same track does not restart on navigation.
+- **BGM:** continuous across screens. **Fair Harvard plays only on the menu screens** (title, Dictionary, congrats). Each map page and each stage has its own Glee Club excerpt (96 kbps MP3 loops of 100 to 120 s, about 18 MB in all), loaded only when that screen opens. The same track does not restart on navigation, and switching tracks keeps the playback position in the loop.
 - Mute persists as `parting-notes-mute`.
 - **Effects volume** slider (0 to 100) sits under Music and scales every sound effect, with a short preview click. Saved as `pn_sfx_volume_v1`.
-- **Music volume** slider (0 to 100) sits next to Mute on the title and play screens and only changes music, not SFX. Saved as `pn_music_volume_v1`. Mute still silences everything; unmute returns to the slider level. Game hotkeys (except Esc) are ignored while the slider has focus.
-- Spotify HGC2627 is listen-along / credit only — do not rip streams into the build. See `assets/audio/README.md`.
+- **Music volume** slider (0 to 100) sits next to Mute on the title screen and in Help during play and only changes music, not SFX. Saved as `pn_music_volume_v1`. Mute still silences everything; unmute returns to the slider level. Game hotkeys (except Esc) are ignored while the slider has focus.
+- Spotify HGC2627 is listen-along / credit only. Do not rip streams into the build. See `assets/audio/README.md`.
+
+### Screen and stage music
+
+| Screen | File | Source (Harvard Glee Club) |
+|--------|------|----------------------------|
+| Title, Dictionary, congrats | `fair-harvard.mp3` | Fair Harvard |
+| Map page 1 (Outside to Lobby) | `map/page-1.mp3` | Shen khar venakhi (K-K), 0:04 to 1:44 |
+| Map page 2 (Hall to Encore) | `map/page-2.mp3` | Poulenc, 1:52 to 3:32 |
+| Map page 3 (Backstage to Closing Night) | `map/page-3.mp3` | O Come Ye Disconsolate, 0:04 to 1:44 |
+| Map page 4 (A Christmas Carol) | `map/page-4.mp3` | A Christmas Journey, 2:30 to 4:10 |
+| Lawn Approach | `stages/approach.mp3` | Harvard Football Songs, 0:04 to 1:54 |
+| Lobby Threshold | `stages/entrance.mp3` | Harvard Football Medley, 0:04 to 1:44 |
+| Backstage Hall | `stages/hallway.mp3` | Drunken Sailor, 0:40 to 2:30 |
+| Elevator Bank | `stages/elevator.mp3` | Tskhenosnuri (02), 0:03 to 1:45 |
+| Stage Curtain | `stages/finale.mp3` | Rossini, 1:48 to 3:38 |
+| Encore Call | `stages/encore.mp3` | Harvard Football Medley, 2:20 to 4:10 |
+| Green Room Crush | `stages/greenroom.mp3` | Shen khar venakhi (Gurian), 0:04 to 2:04 |
+| Loading Dock | `stages/dock.mp3` | Tskhenosnuri (04), 0:03 to 1:51 |
+| Midnight Tour Bus | `stages/tourbus.mp3` | Poulenc, 0:04 to 1:44 |
+| Closing Night | `stages/closing.mp3` | O Come Ye Disconsolate, 2:20 to 4:05 |
+| Encore (endless) | `stages/endless.mp3` | Rossini, 4:50 to 6:32 |
+
+Files live under `assets/audio/map/` and `assets/audio/stages/` (Carol staves under `assets/audio/carol/`). They are local files and are not committed. If a stage file is missing the stage falls back to the shared beds below and then to the procedural pad, never to Fair Harvard.
 
 ### Adding music
 
@@ -103,10 +153,10 @@ Only legal tracks (public domain or your own recordings) go in `assets/audio/rep
 |-----|------------------------------|
 | `title-` (title, Dictionary, congrats) | `title-01.mp3`, `title-01.ogg`, `glorious-apollo.mp3` |
 | `adventure-` (map) | `adventure-01.mp3`, `adventure-01.ogg`, `abendlied.mp3`, `o-vos-omnes.mp3` |
-| `play-` (stages 1 to 9) | `play-01.mp3`, `play-01.ogg`, `football-songs.mp3` |
+| `play-` (stages 1 to 9, and Carol staves without their file) | `play-01.mp3`, `play-01.ogg`, `football-songs.mp3` |
 | `closing-` (Closing Night) | `closing-01.mp3`, `closing-01.ogg`, `come-ye-disconsolate.mp3` |
 
-If none load, Adventure and Play fall back to the title files, Closing Night tries play, adventure, then title. After that comes `assets/audio/fair-harvard.mp3` (or `.ogg`), then the procedural pad.
+If none load, Play falls back to the adventure files and Closing Night tries play, then adventure. Only the title bed goes on to `assets/audio/fair-harvard.mp3` (or `.ogg`). Anything left over gets the procedural pad.
 
 A file that fails to load is remembered as missing for 10 minutes per tab (sessionStorage `pn_bgm_missing_v1`), so it is not requested again on every screen change or reload. The first visit in a tab still logs a few 404s in the console for names that are not there. After adding a track, open a new tab or use `?debug`, which skips this memory.
 

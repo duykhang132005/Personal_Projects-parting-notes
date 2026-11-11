@@ -103,7 +103,9 @@
     const width = cols * tile;
     const height = rows * tile;
     const seed = (level && typeof level.index === 'number') ? level.index : 0;
-    const theme = THEMES[Math.min(seed, THEMES.length - 1)] || THEMES[0];
+    // Stages can reuse another stage's backdrop (the Carol act does); seed still varies the details.
+    const themeIdx = (level && typeof level.mapTheme === 'number') ? level.mapTheme : seed;
+    const theme = THEMES[Math.min(themeIdx, THEMES.length - 1)] || THEMES[0];
 
     function strokePath(ctx, widthMul, color, offsetScale) {
       if (waypoints.length < 2) return;
@@ -1244,7 +1246,33 @@
       { bg: drawBackdropTourBus, build: drawBuildableTourBus, props: drawPropsTourBus, markers: drawMarkersTourBus },
       { bg: drawBackdropClosing, build: drawBuildableClosing, props: drawPropsClosing, markers: drawMarkersClosing },
     ];
-    const d = drawers[Math.min(seed, drawers.length - 1)];
+    const d = drawers[Math.min(themeIdx, drawers.length - 1)];
+
+    // Light, still snowfall for winter stages (no animation, so nothing to reduce for motion).
+    const snowFlakes = [];
+    if (level && level.snow) {
+      for (let i = 0; i < 64; i++) {
+        const h = hash(i * 31 + 5, seed + 17);
+        snowFlakes.push({
+          x: h % width,
+          y: (h >>> 9) % height,
+          r: 1 + ((h >>> 4) % 3) * 0.7,
+          a: 0.35 + ((h >>> 13) % 4) * 0.12,
+        });
+      }
+    }
+    function drawSnow(ctx) {
+      if (!snowFlakes.length) return;
+      ctx.save();
+      ctx.fillStyle = '#f4f8fc';
+      for (const f of snowFlakes) {
+        ctx.globalAlpha = f.a;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
 
     function drawPlacementHint(ctx, c, r, valid) {
       if (r < 0 || r >= rows || c < 0 || c >= cols) return;
@@ -1274,13 +1302,14 @@
       height,
       levelId: level && level.id,
       themeId: theme.id,
-      themeIndex: seed,
+      themeIndex: themeIdx,
       draw(ctx) {
         d.bg(ctx);
         d.build(ctx);
         drawThemedPath(ctx);
         d.props(ctx);
         d.markers(ctx);
+        drawSnow(ctx);
       },
       drawPlacementHint,
       canBuild(c, r) {

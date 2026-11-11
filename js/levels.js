@@ -1,4 +1,4 @@
-/* Parting Notes — adventure levels (maps + difficulty) */
+/* Parting Notes: adventure levels (maps + difficulty) */
 (function (global) {
   const COLS = 12;
   const ROWS = 10;
@@ -49,7 +49,7 @@
     { entries: [{ type: 'whole', count: 3 }, { type: 'half', count: 5 }, { type: 'eighth', count: 14 }], spawnGap: 0.4 },
   ];
 
-  /** Encore — introduce jazz notes (damage-capped glitter). */
+  /** Encore: introduce jazz notes (damage-capped glitter). */
   const WAVE_ENCORE = [
     { entries: [{ type: 'quarter', count: 8 }, { type: 'eighth', count: 6 }], spawnGap: 0.6 },
     { entries: [{ type: 'quarter', style: 'jazz', count: 4 }, { type: 'eighth', count: 8 }], spawnGap: 0.55 },
@@ -63,7 +63,7 @@
     { entries: [{ type: 'whole', count: 2 }, { type: 'half', style: 'jazz', count: 3 }, { type: 'eighth', count: 12 }], spawnGap: 0.38 },
   ];
 
-  /** Green room / dock — heavier jazz mix. */
+  /** Green room / dock: heavier jazz mix. */
   const WAVE_JAZZ_HEAVY = [
     { entries: [{ type: 'eighth', count: 10 }, { type: 'quarter', style: 'jazz', count: 6 }], spawnGap: 0.55 },
     { entries: [{ type: 'quarter', count: 8 }, { type: 'eighth', style: 'jazz', count: 10 }], spawnGap: 0.5 },
@@ -77,7 +77,7 @@
     { entries: [{ type: 'whole', count: 2 }, { type: 'half', style: 'jazz', count: 4 }, { type: 'eighth', style: 'jazz', count: 14 }], spawnGap: 0.36 },
   ];
 
-  /** Tour bus — folk arrives (needs high damage). */
+  /** Tour bus: folk arrives (needs high damage). */
   const WAVE_FOLK_INTRO = [
     { entries: [{ type: 'eighth', count: 12 }, { type: 'quarter', style: 'jazz', count: 6 }], spawnGap: 0.5 },
     { entries: [{ type: 'quarter', count: 8 }, { type: 'half', count: 2 }, { type: 'quarter', style: 'folk', count: 2 }], spawnGap: 0.5 },
@@ -91,7 +91,7 @@
     { entries: [{ type: 'whole', count: 2 }, { type: 'whole', style: 'folk', count: 1 }, { type: 'half', style: 'jazz', count: 3 }, { type: 'eighth', count: 12 }], spawnGap: 0.34 },
   ];
 
-  /** Closing night — full jazz + folk mix; Andy Clark enters late. */
+  /** Closing night: full jazz + folk mix; Andy Clark enters late. */
   const WAVE_FINALE_MIX = [
     { entries: [{ type: 'eighth', style: 'jazz', count: 12 }, { type: 'quarter', count: 8 }], spawnGap: 0.48 },
     { entries: [{ type: 'quarter', style: 'folk', count: 4 }, { type: 'eighth', count: 10 }, { type: 'quarter', style: 'jazz', count: 5 }], spawnGap: 0.45 },
@@ -185,7 +185,7 @@
       id: 'encore',
       index: 5,
       name: 'Encore Call',
-      blurb: 'They want one more number. Jazz notes shimmer in — they shrug off heavy hits.',
+      blurb: 'They want one more number. Jazz notes shimmer in, and they shrug off heavy hits.',
       lives: 12,
       gold: 135,
       betweenDelay: 3,
@@ -231,7 +231,7 @@
       id: 'tourbus',
       index: 8,
       name: 'Midnight Tour Bus',
-      blurb: 'On the road at midnight. Folk notes land — only big hits get through.',
+      blurb: 'On the road at midnight. Folk notes land, and only big hits get through.',
       lives: 10,
       gold: 140,
       betweenDelay: 2.5,
@@ -246,7 +246,7 @@
       id: 'closing',
       index: 9,
       name: 'Closing Night',
-      blurb: 'Packed house finale. Jazz, folk, and conductor Andy Clark — stun the choir if you let him cue.',
+      blurb: 'Packed house finale. Jazz, folk, and conductor Andy Clark, who stuns the choir if you let him cue.',
       lives: 9,
       gold: 145,
       betweenDelay: 2.4,
@@ -259,6 +259,126 @@
       waves: WAVE_FINALE_MIX,
     },
   ];
+
+  // A Christmas Carol: a five-stave act that opens after Closing Night. Each stave is scored by
+  // a movement from the Harvard Glee Club course recordings (assets/audio/carol/<music>.mp3).
+  // Carol stages live outside LEVELS, so the saved "unlocked" count and the main campaign stay
+  // exactly as before. A stave opens when the one before it (or Closing Night) is in "cleared".
+  // index continues after Closing Night (10 to 14) so ids, stats and map paging stay unique;
+  // mapTheme picks which existing backdrop to reuse, and snow adds a light winter overlay.
+  const CAROL_ACT = {
+    id: 'carol',
+    name: 'A Christmas Carol',
+    unlockAfter: 'closing',
+    audioDir: 'assets/audio/carol/',
+  };
+
+  const CAROL_LEVELS = [
+    {
+      id: 'carol-marley',
+      index: 10,
+      act: 'carol',
+      actIndex: 0,
+      name: "Marley's Ghost",
+      blurb: "Stave one. Chains rattle through Scrooge's counting-house as jazz notes drift in from the dark.",
+      music: 'carol-marley',
+      mapTheme: 2,
+      snow: true,
+      lives: 12,
+      gold: 160,
+      betweenDelay: 3,
+      path: [
+        [0, 7], [1, 7], [2, 7], [3, 7], [3, 6], [3, 5], [3, 4], [3, 3], [3, 2], [4, 2], [5, 2], [6, 2],
+        [6, 3], [6, 4], [6, 5], [6, 6], [7, 6], [8, 6], [9, 6], [9, 5], [9, 4], [9, 3], [10, 3], [11, 3],
+      ],
+      blocks: [[1, 4], [2, 1], [5, 5], [7, 8], [8, 1], [10, 6], [4, 8], [7, 3]],
+      waves: scaleWaves(WAVE_JAZZ_HEAVY, 1.0, 1.0),
+    },
+    {
+      id: 'carol-past',
+      index: 11,
+      act: 'carol',
+      actIndex: 1,
+      name: 'Christmas Past',
+      blurb: "Stave two. Fezziwig's ball is in full swing, and folk notes join the dance.",
+      music: 'carol-past',
+      mapTheme: 5,
+      snow: true,
+      lives: 11,
+      gold: 160,
+      betweenDelay: 2.8,
+      path: [
+        [0, 1], [1, 1], [2, 1], [2, 2], [2, 3], [2, 4], [2, 5], [2, 6], [3, 6], [4, 6], [5, 6], [5, 5],
+        [5, 4], [5, 3], [6, 3], [7, 3], [8, 3], [8, 4], [8, 5], [8, 6], [8, 7], [9, 7], [10, 7], [11, 7],
+      ],
+      blocks: [[1, 4], [4, 2], [4, 8], [6, 6], [7, 1], [9, 4], [10, 2], [3, 4], [6, 8]],
+      waves: scaleWaves(WAVE_FOLK_INTRO, 1.0, 1.0),
+    },
+    {
+      id: 'carol-present',
+      index: 12,
+      act: 'carol',
+      actIndex: 2,
+      name: 'Christmas Present',
+      blurb: 'Stave three. A feast-lit street on Christmas Eve, crowded with jazz and folk notes.',
+      music: 'carol-present',
+      mapTheme: 4,
+      snow: true,
+      lives: 11,
+      gold: 165,
+      betweenDelay: 2.6,
+      path: [
+        [0, 5], [1, 5], [2, 5], [2, 4], [2, 3], [2, 2], [3, 2], [4, 2], [5, 2], [6, 2], [6, 3], [6, 4],
+        [6, 5], [6, 6], [6, 7], [7, 7], [8, 7], [9, 7], [9, 6], [9, 5], [9, 4], [9, 3], [10, 3], [11, 3],
+      ],
+      blocks: [[1, 2], [1, 7], [4, 4], [4, 7], [5, 8], [7, 4], [8, 1], [10, 5], [3, 8], [11, 6]],
+      waves: scaleWaves(WAVE_FOLK_INTRO, 1.1, 0.95),
+    },
+    {
+      id: 'carol-future',
+      index: 13,
+      act: 'carol',
+      actIndex: 3,
+      name: 'Yet to Come',
+      blurb: 'Stave four. A silent spirit points the way, and Andy Clark returns from the shadows.',
+      music: 'carol-future',
+      mapTheme: 8,
+      snow: true,
+      lives: 10,
+      gold: 165,
+      betweenDelay: 2.5,
+      path: [
+        [0, 2], [1, 2], [2, 2], [3, 2], [3, 3], [3, 4], [3, 5], [3, 6], [3, 7], [4, 7], [5, 7], [5, 6],
+        [5, 5], [5, 4], [5, 3], [6, 3], [7, 3], [7, 4], [7, 5], [7, 6], [7, 7], [8, 7], [9, 7], [9, 6],
+        [9, 5], [9, 4], [10, 4], [11, 4],
+      ],
+      blocks: [[1, 5], [2, 8], [4, 1], [4, 5], [6, 5], [6, 8], [8, 2], [8, 5], [10, 7], [10, 1]],
+      waves: scaleWaves(WAVE_FINALE_MIX, 1.0, 1.0),
+    },
+    {
+      id: 'carol-morning',
+      index: 14,
+      act: 'carol',
+      actIndex: 4,
+      name: 'Christmas Morning',
+      blurb: 'Stave five. Snow on the lawn and bells in the air. Hold the line for one last chorus.',
+      music: 'carol-morning',
+      mapTheme: 0,
+      snow: true,
+      lives: 10,
+      gold: 170,
+      betweenDelay: 2.4,
+      path: [
+        [0, 4], [1, 4], [2, 4], [2, 5], [2, 6], [2, 7], [3, 7], [4, 7], [5, 7], [5, 6], [5, 5], [5, 4],
+        [5, 3], [5, 2], [6, 2], [7, 2], [8, 2], [8, 3], [8, 4], [8, 5], [8, 6], [9, 6], [10, 6], [10, 5],
+        [10, 4], [11, 4],
+      ],
+      blocks: [[1, 2], [1, 7], [3, 4], [4, 1], [4, 8], [6, 5], [7, 8], [9, 3], [11, 7], [7, 4]],
+      waves: scaleWaves(WAVE_FINALE_MIX, 1.1, 0.95),
+    },
+  ];
+
+  const ALL_LEVELS = LEVELS.concat(CAROL_LEVELS);
 
   // Encore (endless): unlocked with Choir Andy (Closing Night cleared, or ?debug). It is not in
   // LEVELS, so it never touches progress, map paging, transitions or the congrats screen.
@@ -322,9 +442,48 @@
   };
 
   function getLevel(idOrIndex) {
-    if (typeof idOrIndex === 'number') return LEVELS[idOrIndex] || null;
+    if (typeof idOrIndex === 'number') return ALL_LEVELS.find((l) => l.index === idOrIndex) || null;
     if (idOrIndex === ENDLESS_LEVEL.id) return ENDLESS_LEVEL;
-    return LEVELS.find((l) => l.id === idOrIndex) || null;
+    return ALL_LEVELS.find((l) => l.id === idOrIndex) || null;
+  }
+
+  // Background music. Fair Harvard is the menu theme only (title, Dictionary, congrats).
+  // Each map page and each stage has its own Glee Club excerpt, loaded only when that screen
+  // opens; a missing file falls back to the shared beds in js/audio.js, never to Fair Harvard.
+  const MUSIC = {
+    menu: 'assets/audio/fair-harvard.mp3',
+    pages: [
+      'assets/audio/map/page-1.mp3',
+      'assets/audio/map/page-2.mp3',
+      'assets/audio/map/page-3.mp3',
+      'assets/audio/map/page-4.mp3',
+    ],
+    stages: {
+      approach: 'assets/audio/stages/approach.mp3',
+      entrance: 'assets/audio/stages/entrance.mp3',
+      hallway: 'assets/audio/stages/hallway.mp3',
+      elevator: 'assets/audio/stages/elevator.mp3',
+      finale: 'assets/audio/stages/finale.mp3',
+      encore: 'assets/audio/stages/encore.mp3',
+      greenroom: 'assets/audio/stages/greenroom.mp3',
+      dock: 'assets/audio/stages/dock.mp3',
+      tourbus: 'assets/audio/stages/tourbus.mp3',
+      closing: 'assets/audio/stages/closing.mp3',
+      endless: 'assets/audio/stages/endless.mp3',
+    },
+  };
+
+  // Music file for a stage: Carol staves use their own movement, other stages their excerpt.
+  function trackUrl(levelOrId) {
+    const level = typeof levelOrId === 'string' ? getLevel(levelOrId) : levelOrId;
+    if (!level) return null;
+    if (typeof level.music === 'string' && level.music) return CAROL_ACT.audioDir + level.music + '.mp3';
+    return MUSIC.stages[level.id] || null;
+  }
+
+  // Music file for an adventure map page (0-based), or null.
+  function pageTrackUrl(page) {
+    return MUSIC.pages[page] || null;
   }
 
   const PROGRESS_KEY = 'parting-notes-progress';
@@ -380,7 +539,8 @@
     const p = loadProgress();
     if (!p.cleared.includes(levelId)) p.cleared.push(levelId);
     const level = getLevel(levelId);
-    if (level && level.index + 2 > p.unlocked) {
+    // Carol staves unlock from "cleared", so they never move the main campaign's count.
+    if (level && !level.act && level.index + 2 > p.unlocked) {
       p.unlocked = Math.min(LEVELS.length, level.index + 2);
     }
     if (levelId === 'closing') unlockTower('andy', p);
@@ -432,9 +592,29 @@
     return p.cleared.includes('closing');
   }
 
+  function isCarolUnlocked(progressOpt) {
+    const p = progressOpt || loadProgress();
+    return p.cleared.includes(CAROL_ACT.unlockAfter);
+  }
+
+  // One rule for every stage: main stages use the saved count, Carol staves need the stave
+  // before them (the first needs Closing Night), and Encore follows isEndlessUnlocked.
+  function isLevelUnlocked(levelOrId, progressOpt) {
+    const level = typeof levelOrId === 'object' && levelOrId ? levelOrId : getLevel(levelOrId);
+    if (!level) return false;
+    if (level.endless) return isEndlessUnlocked();
+    const p = progressOpt || loadProgress();
+    if (level.act === CAROL_ACT.id) {
+      const prev = level.actIndex > 0 ? CAROL_LEVELS[level.actIndex - 1] : null;
+      return p.cleared.includes(prev ? prev.id : CAROL_ACT.unlockAfter);
+    }
+    return level.index < p.unlocked;
+  }
+
   function getNextLevel(idOrIndex) {
     const cur = getLevel(idOrIndex);
     if (!cur || cur.endless) return null;
+    if (cur.act === CAROL_ACT.id) return CAROL_LEVELS[cur.actIndex + 1] || null;
     return LEVELS[cur.index + 1] || null;
   }
 
@@ -443,9 +623,17 @@
     ROWS,
     TILE,
     LEVELS,
+    CAROL_ACT,
+    CAROL_LEVELS,
+    ALL_LEVELS,
     BASE_TOWERS,
     getLevel,
     getNextLevel,
+    isLevelUnlocked,
+    isCarolUnlocked,
+    trackUrl,
+    pageTrackUrl,
+    MUSIC,
     loadProgress,
     saveProgress,
     markCleared,
