@@ -5,9 +5,9 @@
   const WHAT = {
     soprano: {
       range: [
-        'Longer breath lets her reach notes further down the path.',
-        'Reaches further again.',
-        'Her widest reach. Chain bounces look for a different kind of note first.',
+        'Longer breath lets her reach notes further down the path, and her echoes jump further.',
+        'Reaches further again, and her echoes jump further again.',
+        'Her widest reach and longest echo jumps. Bounces look for a different kind of note first.',
       ],
       damage: [
         'Each hit echoes to one more nearby note.',

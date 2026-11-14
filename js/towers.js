@@ -228,12 +228,7 @@
         s.range += 40;
         s.chainPreferDifferent = true; // Melody
       }
-      // Chain reach only matters after Damage path unlocks chaining.
-      if (ud >= 1) {
-        if (ur >= 1) s.chainRange += 10;
-        if (ur >= 2) s.chainRange += 20;
-        if (ur >= 3) s.chainRange += 25;
-      }
+      // Breath chain reach is added after the Damage path below, so Echo's minimum does not erase it.
     } else if (type === 'alto') {
       if (ur >= 1) {
         s.range += 20;
@@ -298,6 +293,13 @@
         s.chainJumps = Math.max(s.chainJumps, 3);
         s.chainRange = Math.max(s.chainRange, 125);
         s.chainDamageScale = 0.75;
+      }
+      // Breath path: echoes jump further. Only matters once Echo unlocks chaining, and it is
+      // applied after the Echo / Cascade / Vibrato minimums so the bonus always counts.
+      if (ud >= 1) {
+        if (ur >= 1) s.chainRange += 10;
+        if (ur >= 2) s.chainRange += 20;
+        if (ur >= 3) s.chainRange += 25;
       }
     } else if (type === 'alto') {
       if (ud >= 1) {

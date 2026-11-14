@@ -1,4 +1,4 @@
-/* Parting Notes — wave director */
+/* Parting Notes: wave director */
 (function (global) {
   function flattenWave(wave) {
     const list = [];

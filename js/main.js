@@ -1221,6 +1221,10 @@
         } else {
           state.selectedType = state.selectedType === id ? null : id;
           if (state.selectedType) state.selectedTower = null;
+          // Same as tapping the shop: on phones the sheet tucks away so the board is clear.
+          // Focus stays put unless it was inside the sheet (then it moves to the toggle).
+          if (state.selectedType && isNarrow()) setDrawer(false);
+          PNUI.syncShop(state);
         }
       }
       if (ev.key === ' ') {

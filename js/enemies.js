@@ -1,11 +1,11 @@
-/* Parting Notes — music-note enemies */
+/* Parting Notes: music-note enemies */
 (function (global) {
   const TYPES = {
     eighth: { id: 'eighth', name: 'Eighth', hp: 20, speed: 90, gold: 4, color: '#e8c547' },
     quarter: { id: 'quarter', name: 'Quarter', hp: 40, speed: 60, gold: 6, color: '#1a1f16' },
     half: { id: 'half', name: 'Half', hp: 100, speed: 40, gold: 12, color: '#2f5d8c' },
     whole: { id: 'whole', name: 'Whole', hp: 200, speed: 28, gold: 20, color: '#8b2942' },
-    /** Conductor boss — Closing Night only. */
+    /** Conductor boss: Closing Night only. */
     andy: {
       id: 'andy',
       name: 'Andy Clark',
@@ -82,8 +82,8 @@
 
   /**
    * Apply jazz cap / folk threshold to raw hit damage.
-   * opts.jazzCapBonus — extra Jazz cap from Alto Harmony auras.
-   * opts.folkAssist — raw-damage assist toward Folk threshold only (does not add damage).
+   * opts.jazzCapBonus: extra Jazz cap from Alto Harmony auras.
+   * opts.folkAssist: raw-damage assist toward Folk threshold only (does not add damage).
    */
   function filterDamage(enemy, amount, opts) {
     let dmg = amount;

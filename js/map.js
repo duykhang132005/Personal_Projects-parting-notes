@@ -1,4 +1,4 @@
-/* Parting Notes — theme-aware stage backdrops (journey to the hall) */
+/* Parting Notes: theme-aware stage backdrops (journey to the hall) */
 (function (global) {
   const TILE_GRASS = 0;
   const TILE_PATH = 1;
@@ -28,7 +28,7 @@
     return grid;
   }
 
-  /** Visual themes keyed by level index — grid/path/blocks stay logical. */
+  /** Visual themes keyed by level index (grid, path and blocks stay logical). */
   const THEMES = [
     {
       id: 'approach',
@@ -157,7 +157,7 @@
       }
     }
 
-    /* —— Level 0: grass field + sidewalk approach —— */
+    /* == Level 0: grass field + sidewalk approach == */
     function drawBackdropApproach(ctx) {
       const sky = ctx.createLinearGradient(0, 0, 0, height * 0.35);
       sky.addColorStop(0, '#7eb6e8');
@@ -272,7 +272,7 @@
       ctx.fill();
     }
 
-    /* —— Level 1: entering the building —— */
+    /* == Level 1: entering the building == */
     function drawBackdropEntrance(ctx) {
       // brick facade upper
       const brick = ctx.createLinearGradient(0, 0, 0, height);
@@ -385,7 +385,7 @@
       ctx.fillRect(end.x + 4, end.y - 20, 16, 36);
     }
 
-    /* —— Level 2: interior hallway —— */
+    /* == Level 2: interior hallway == */
     function drawBackdropHallway(ctx) {
       const wall = ctx.createLinearGradient(0, 0, 0, height);
       wall.addColorStop(0, '#5a4a3e');
@@ -495,7 +495,7 @@
       ctx.fill();
     }
 
-    /* —— Level 3: elevator / elevator lobby —— */
+    /* == Level 3: elevator / elevator lobby == */
     function drawBackdropElevator(ctx) {
       const metal = ctx.createLinearGradient(0, 0, width, height);
       metal.addColorStop(0, '#3a4048');
@@ -611,7 +611,7 @@
       ctx.fillText('↑', end.x + 14, end.y - 34);
     }
 
-    /* —— Level 4: audience seating into stage —— */
+    /* == Level 4: audience seating into stage == */
     function drawBackdropStage(ctx) {
       const base = ctx.createLinearGradient(0, 0, 0, height);
       base.addColorStop(0, '#6b4423');
@@ -736,7 +736,7 @@
     }
 
 
-    /* —— Level 5: Encore Call — spotlight stage return —— */
+    /* == Level 5: Encore Call: spotlight stage return == */
     function drawBackdropEncore(ctx) {
       const base = ctx.createLinearGradient(0, 0, 0, height);
       base.addColorStop(0, '#2a1218');
@@ -834,7 +834,7 @@
       ctx.fillText('ENCORE', end.x + 12, end.y - 34);
     }
 
-    /* —— Level 6: Green Room Crush —— */
+    /* == Level 6: Green Room Crush == */
     function drawBackdropGreenRoom(ctx) {
       const wall = ctx.createLinearGradient(0, 0, 0, height);
       wall.addColorStop(0, '#3a5a48');
@@ -930,7 +930,7 @@
       ctx.beginPath(); ctx.arc(end.x + 18, end.y, 3, 0, Math.PI * 2); ctx.fill();
     }
 
-    /* —— Level 7: Loading Dock —— */
+    /* == Level 7: Loading Dock == */
     function drawBackdropDock(ctx) {
       const concrete = ctx.createLinearGradient(0, 0, 0, height);
       concrete.addColorStop(0, '#5a5a50');
@@ -1019,7 +1019,7 @@
       ctx.fillText('EXIT', end.x + 14, end.y - 32);
     }
 
-    /* —— Level 8: Midnight Tour Bus —— */
+    /* == Level 8: Midnight Tour Bus == */
     function drawBackdropTourBus(ctx) {
       // night outside
       const night = ctx.createLinearGradient(0, 0, 0, height);
@@ -1114,7 +1114,7 @@
       ctx.fillText('BUS', end.x + 12, end.y - 32);
     }
 
-    /* —— Level 9: Closing Night — richest packed house —— */
+    /* == Level 9: Closing Night, richest packed house == */
     function drawBackdropClosing(ctx) {
       const base = ctx.createLinearGradient(0, 0, 0, height);
       base.addColorStop(0, '#1a0810');

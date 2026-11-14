@@ -58,3 +58,29 @@ describe('Dictionary skill descriptions', () => {
     assert.ok(S.baseLines('soprano').includes('Damage 30'));
   });
 });
+
+describe('Soprano Breath chain reach', () => {
+  const stats = (T, ur, ud) => T.combatStats({ type: 'soprano', kind: 'soprano', upgRange: ur, upgDamage: ud });
+
+  it('adds echo reach on top of the Echo, Cascade and Vibrato minimums', () => {
+    const { T } = load();
+    // Without chaining (no Echo) Breath has nothing to extend.
+    assert.equal(stats(T, 2, 0).chainJumps, 0);
+    const echo = stats(T, 0, 1).chainRange;
+    assert.equal(stats(T, 1, 1).chainRange, echo + 10);
+    assert.equal(stats(T, 2, 1).chainRange, echo + 30);
+    assert.equal(stats(T, 3, 1).chainRange, echo + 55);
+    const vibrato = stats(T, 0, 3).chainRange;
+    assert.equal(stats(T, 2, 3).chainRange, vibrato + 30);
+  });
+
+  it('shows the echo reach in the Dictionary entry for each Breath tier', () => {
+    const { S } = load();
+    for (let tier = 0; tier < 3; tier++) {
+      const d = S.describe('soprano', 'range', tier);
+      assert.ok(d.nums.some((n) => /^with Echo: chain reach \d+ to \d+$/.test(n)), d.name + ' lists chain reach');
+      assert.match(d.what, /echo/i);
+    }
+  });
+});
+

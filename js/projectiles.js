@@ -1,4 +1,4 @@
-/* Parting Notes — projectiles */
+/* Parting Notes: projectiles */
 (function (global) {
   function createProjectile(opts) {
     return {
