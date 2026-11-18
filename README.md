@@ -32,7 +32,9 @@ Per-tower targeting: Front / Back / Closest / Highest HP.
 
 ## Layout
 
-The board fills most of the window and keeps its shape (scaled to fit, clicks map to the right cell at any size). The shop, targeting, upgrades and status list sit in a drawer over the board: a side panel on desktop, a bottom sheet on phones (375px and up). **Hide shop** / **Show shop** or **B** toggles it. On phones the sheet tucks away when you pick a singer to place and opens again when you select a placed one. Controls and sound sliders live in **Help**. The drawer animation is skipped with reduced motion.
+The board fills most of the window and keeps its shape (scaled to fit, clicks map to the right cell at any size). The shop, targeting, upgrades and status list sit in a drawer. Above 720px wide the open drawer gets its own column beside the board, and the board shrinks to fit the space that is left, so nothing is covered; closing the drawer gives the width back. At 720px and below it is a bottom sheet over the lower part of the screen. **Hide shop** / **Show shop** or **B** toggles it. On phones the sheet tucks away when you pick a singer to place (by tapping the shop or pressing 1 to 5) and opens again when you select a placed one. Controls and sound sliders live in **Help**. The drawer animation is skipped with reduced motion.
+
+The game works down to 320px wide with no sideways scrolling; on very narrow phones the map header stacks and the map nodes sit closer together.
 
 ## Note styles
 
@@ -58,7 +60,9 @@ A five-stave act on the fourth map page, following Dickens' story. It opens when
 | 2 | Christmas Past | Fezziwig's Ball |
 | 3 | Christmas Present | The Ghost of Christmas Present |
 | 4 | Yet to Come | Ghost of the Future (Andy Clark returns) |
-| 5 | Christmas Morning | God Bless Us, Every One |
+| 5 | Christmas Morning | God Bless Us, Every One (Andy Clark again) |
+
+Christmas Past and Christmas Present are tuned tougher than their base wave sets: Past notes have x1.15 HP, Present notes x1.3 HP, and both stages bring slightly more notes, spaced closer together. Kill gold is unchanged.
 
 Carol progress is read from the cleared list in `parting-notes-progress`, so older saves keep every stage and nothing new is added to the save. Carol stages have their own stats and Records rows.
 

@@ -5,14 +5,19 @@
   const TILE = 64;
 
   /** Scale base wave templates by difficulty. Preserves style on entries. */
-  function scaleWaves(base, mult, gapScale) {
+  // hpMult (optional) makes every note in the set tougher without changing its kill gold.
+  function scaleWaves(base, mult, gapScale, hpMult) {
     return base.map((w) => ({
       spawnGap: Math.max(0.35, (w.spawnGap || 0.7) * gapScale),
-      entries: (w.entries || []).map((e) => ({
-        type: e.type,
-        style: e.style || 'normal',
-        count: Math.max(1, Math.round(e.count * mult)),
-      })),
+      entries: (w.entries || []).map((e) => {
+        const out = {
+          type: e.type,
+          style: e.style || 'normal',
+          count: Math.max(1, Math.round(e.count * mult)),
+        };
+        if (hpMult && hpMult !== 1) out.hpMult = hpMult;
+        return out;
+      }),
     }));
   }
 
@@ -312,7 +317,7 @@
         [5, 4], [5, 3], [6, 3], [7, 3], [8, 3], [8, 4], [8, 5], [8, 6], [8, 7], [9, 7], [10, 7], [11, 7],
       ],
       blocks: [[1, 4], [4, 2], [4, 8], [6, 6], [7, 1], [9, 4], [10, 2], [3, 4], [6, 8]],
-      waves: scaleWaves(WAVE_FOLK_INTRO, 1.0, 1.0),
+      waves: scaleWaves(WAVE_FOLK_INTRO, 1.05, 0.95, 1.15),
     },
     {
       id: 'carol-present',
@@ -332,7 +337,7 @@
         [6, 5], [6, 6], [6, 7], [7, 7], [8, 7], [9, 7], [9, 6], [9, 5], [9, 4], [9, 3], [10, 3], [11, 3],
       ],
       blocks: [[1, 2], [1, 7], [4, 4], [4, 7], [5, 8], [7, 4], [8, 1], [10, 5], [3, 8], [11, 6]],
-      waves: scaleWaves(WAVE_FOLK_INTRO, 1.1, 0.95),
+      waves: scaleWaves(WAVE_FOLK_INTRO, 1.1, 0.9, 1.3),
     },
     {
       id: 'carol-future',

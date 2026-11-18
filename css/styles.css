@@ -2075,3 +2075,43 @@ kbd {
   }
   .screen-play .ctrl-btn { min-height: 44px; }
 }
+
+/* Wider screens: an open drawer gets its own column beside the board instead of covering it.
+   The board shrinks to the space that is left (aspect ratio kept, clicks still map through
+   getBoundingClientRect). Closing the drawer gives the width back. */
+@media (min-width: 721px) {
+  .screen-play .canvas-stack:has(> .play-drawer.is-open) {
+    --drawer-gap: 0.5rem;
+    width: min(100%, calc(var(--board-h, 640px) * 1.2 + var(--drawer-w) + var(--drawer-gap)));
+    padding-right: calc(var(--drawer-w) + var(--drawer-gap));
+  }
+  .screen-play .canvas-stack:has(> .play-drawer.is-open) > .play-drawer {
+    max-width: none;
+    padding: 0;
+  }
+}
+
+/* Very narrow phones (320px): the map header's title takes its own row so the Title and
+   Dictionary buttons fit beside each other underneath. Wider screens keep one row. */
+@media (max-width: 400px) {
+  .adv-header-bar {
+    grid-template-columns: 1fr auto;
+    gap: 0.35rem 0.5rem;
+  }
+  .adv-header-bar h2 {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    font-size: 1.6rem;
+  }
+  .adv-header-bar #btn-adv-back { justify-self: start; }
+  /* Same tight node row as the Carol page on every map page, so four nodes fit. */
+  #app:has(> #screen-adventure:not([hidden])) { padding-inline: 0.5rem; }
+  .screen-adventure { padding-inline: 0.25rem; }
+  .adv-map-panel { padding-inline: 0.4rem; }
+  .adv-map-nodes { gap: 0.1rem; padding-inline: 0; }
+  .adv-node { min-width: 0; padding-inline: 0; }
+  .adv-node-orb { width: 2.5rem; height: 2.5rem; }
+  .adv-node-name { max-width: 100%; hyphens: auto; }
+  .adv-node-state { letter-spacing: 0; }
+}
+

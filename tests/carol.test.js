@@ -167,3 +167,35 @@ describe('A Christmas Carol act', () => {
     assert.equal(broken.isLevelUnlocked('carol-marley'), false);
   });
 });
+
+describe('Carol stave tuning', () => {
+  it('toughens Christmas Past and Present notes without extra kill gold', () => {
+    const { context } = loadScripts(['js/levels.js', 'js/waves.js']);
+    const { PNLevels, PNWaves } = context;
+    const mults = (id) => {
+      const out = new Set();
+      PNLevels.getLevel(id).waves.forEach((w) => w.entries.forEach((e) => out.add(e.hpMult || 1)));
+      return Array.from(out);
+    };
+    // Christmas Past and Present were won with two unupgraded singers in a headless run, so
+    // their notes carry more HP; Present stays a step harder than Past.
+    const past = mults('carol-past');
+    const present = mults('carol-present');
+    assert.equal(past.length, 1);
+    assert.equal(present.length, 1);
+    assert.ok(past[0] > 1 && present[0] > past[0]);
+    // The other staves and every main stage are unchanged.
+    ['carol-marley', 'carol-future', 'carol-morning'].concat(MAIN_IDS).forEach((id) => {
+      assert.deepEqual(mults(id), [1], id + ' keeps base HP');
+    });
+    // The HP boost reaches the spawned notes; kill gold is not scaled.
+    const director = PNWaves.createDirector(PNLevels.getLevel('carol-present').waves, { betweenDelay: 3 });
+    director.begin();
+    let spawned = null;
+    for (let i = 0; i < 50 && !spawned; i++) spawned = director.update(0.1, 0).spawned;
+    assert.ok(spawned, 'first note spawns');
+    assert.equal(spawned.hpMult, present[0]);
+    assert.equal(spawned.goldMult, undefined);
+  });
+});
+
