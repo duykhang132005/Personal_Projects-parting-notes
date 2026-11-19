@@ -900,6 +900,9 @@ kbd {
   background: var(--title-black);
 }
 
+/* The <picture> wrapper adds no box of its own, so the image keeps its old layout. */
+.screen-title > picture { display: contents; }
+
 .title-splash {
   position: absolute;
   left: 50%;
@@ -1477,6 +1480,12 @@ kbd {
     radial-gradient(ellipse 80% 50% at 50% 0%, rgba(90, 154, 74, 0.22), transparent 55%),
     radial-gradient(ellipse 70% 45% at 70% 100%, rgba(165, 28, 48, 0.18), transparent 50%),
     url('../assets/title-splash.png') center / cover no-repeat;
+  /* Smaller WebP where image-set() with type() is supported; the PNG line above is the fallback. */
+  background:
+    linear-gradient(180deg, rgba(12, 8, 6, 0.72) 0%, rgba(26, 16, 12, 0.78) 45%, rgba(10, 6, 5, 0.9) 100%),
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(90, 154, 74, 0.22), transparent 55%),
+    radial-gradient(ellipse 70% 45% at 70% 100%, rgba(165, 28, 48, 0.18), transparent 50%),
+    image-set(url('../assets/title-splash.webp') type('image/webp'), url('../assets/title-splash.png') type('image/png')) center / cover no-repeat;
   background-color: var(--night);
 }
 

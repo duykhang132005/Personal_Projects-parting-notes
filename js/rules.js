@@ -226,8 +226,14 @@
     };
   }
 
+  // First button on the win / loss card: "Play again" after a win, "Retry" otherwise.
+  function endPrimaryLabel(kind) {
+    return kind === 'Victory' ? 'Play again' : 'Retry';
+  }
+
   global.PNRules = {
     canAfford,
+    endPrimaryLabel,
     boardPoint,
     leakAmount,
     applyLifeLeak,

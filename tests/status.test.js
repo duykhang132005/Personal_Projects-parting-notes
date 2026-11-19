@@ -165,3 +165,12 @@ describe('board pointer mapping', () => {
   });
 });
 
+
+describe('end card', () => {
+  it('offers Play again after a win (Carol finale included) and Retry after a loss', () => {
+    const { R } = load();
+    assert.equal(R.endPrimaryLabel('Victory'), 'Play again');
+    assert.equal(R.endPrimaryLabel('Defeat'), 'Retry');
+    assert.equal(R.endPrimaryLabel('Encore over'), 'Retry');
+  });
+});

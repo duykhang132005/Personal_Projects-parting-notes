@@ -17,6 +17,16 @@
   function setDisabled(el, v) {
     if (el && el.disabled !== v) el.disabled = v;
   }
+  function setHidden(el, v) {
+    if (el && el.hidden !== v) el.hidden = v;
+  }
+
+  // Encore best wave, read from storage once per run and when it changes (not every frame).
+  let encoreBest = null;
+  function refreshEncoreBest() {
+    encoreBest = global.PNStats ? PNStats.getEncoreBest() : 0;
+    return encoreBest;
+  }
 
   function renderHud(state, director) {
     const lives = document.querySelector('[data-hud="lives"]');
@@ -26,7 +36,7 @@
     setText(lives, 'Lives: ' + state.lives);
     setText(gold, 'Gold: ' + state.gold);
     if (wave && director && director.endless) {
-      const best = global.PNStats ? PNStats.getEncoreBest() : 0;
+      const best = encoreBest === null ? refreshEncoreBest() : encoreBest;
       setText(wave,
         'Encore wave ' + (director.started ? director.currentDisplay() : 0) +
         (best > 0 ? ' (best ' + best + ')' : ''));
@@ -86,38 +96,40 @@
     if (!btn) return;
 
     if (!t || !PNTowers.upgradeInfo) {
-      btn.disabled = true;
-      btn.classList.remove('cant-afford', 'locked');
-      if (nameEl) nameEl.textContent = '';
-      if (costEl) costEl.textContent = '';
-      if (pipsEl) pipsEl.textContent = '○○○';
+      setDisabled(btn, true);
+      btn.classList.toggle('cant-afford', false);
+      btn.classList.toggle('locked', false);
+      setText(nameEl, '');
+      setText(costEl, '');
+      setText(pipsEl, '○○○');
       return;
     }
 
     const info = PNTowers.upgradeInfo(t, path);
-    if (pipsEl) pipsEl.textContent = pipString(info.tier, info.max);
+    setText(pipsEl, pipString(info.tier, info.max));
     if (info.maxed) {
-      if (nameEl) nameEl.textContent = 'Maxed';
-      if (costEl) costEl.textContent = '';
-      btn.disabled = true;
-      btn.classList.remove('cant-afford', 'locked');
-      btn.title = 'Path maxed';
+      setText(nameEl, 'Maxed');
+      setText(costEl, '');
+      setDisabled(btn, true);
+      btn.classList.toggle('cant-afford', false);
+      btn.classList.toggle('locked', false);
+      setAttr(btn, 'title', 'Path maxed');
       return;
     }
 
-    if (nameEl) nameEl.textContent = info.name;
-    if (costEl) costEl.textContent = info.cost + 'g';
+    setText(nameEl, info.name);
+    setText(costEl, info.cost + 'g');
 
     const check = PNTowers.canBuyUpgrade(t, path, state.gold);
-    btn.disabled = !check.ok;
+    setDisabled(btn, !check.ok);
     btn.classList.toggle('cant-afford', check.reason === 'gold');
     btn.classList.toggle('locked', check.reason === 'crosspath');
     if (check.reason === 'crosspath') {
-      btn.title = 'Crosspath locked (max 3/2)';
+      setAttr(btn, 'title', 'Crosspath locked (max 3/2)');
     } else if (check.reason === 'gold') {
-      btn.title = 'Need ' + info.cost + 'g';
+      setAttr(btn, 'title', 'Need ' + info.cost + 'g');
     } else {
-      btn.title = info.name + ', ' + info.cost + 'g';
+      setAttr(btn, 'title', info.name + ', ' + info.cost + 'g');
     }
   }
 
@@ -130,50 +142,46 @@
         !def || !def.unlockId ||
         (PNLevels.isTowerUnlocked ? PNLevels.isTowerUnlocked(id) : true);
       if (id === 'andy' || def && def.unlockId) {
-        btn.hidden = !unlocked;
+        setHidden(btn, !unlocked);
         btn.classList.toggle('shop-locked', !unlocked);
       }
       btn.classList.toggle('active', state.selectedType === id);
-      btn.disabled = !def || !unlocked;
+      setDisabled(btn, !def || !unlocked);
       const cost = btn.querySelector('[data-cost]');
       if (cost && def) {
-        cost.setAttribute('data-cost', String(def.cost));
-        cost.textContent = def.cost + 'g';
+        setAttr(cost, 'data-cost', String(def.cost));
+        setText(cost, def.cost + 'g');
       }
-      if (def && unlocked && state.gold < def.cost) btn.classList.add('cant-afford');
-      else btn.classList.remove('cant-afford');
+      btn.classList.toggle('cant-afford', !!(def && unlocked && state.gold < def.cost));
     });
 
     const sell = document.getElementById('btn-sell');
     if (sell) {
       const t = state.selectedTower;
-      sell.disabled = !t || state.status !== 'playing';
-      sell.textContent = t
-        ? 'Sell (+' + PNTowers.sellValue(t) + 'g)'
-        : 'Sell (50%)';
+      setDisabled(sell, !t || state.status !== 'playing');
+      setText(sell, t ? 'Sell (+' + PNTowers.sellValue(t) + 'g)' : 'Sell (50%)');
     }
 
     const panel = document.getElementById('target-panel');
     const label = document.getElementById('target-label');
     if (panel) {
       const t = state.selectedTower;
-      panel.hidden = !t;
-      if (t && label) label.textContent = t.name + ' targets';
+      setHidden(panel, !t);
+      if (t) setText(label, t.name + ' targets');
       document.querySelectorAll('[data-target-mode]').forEach((btn) => {
         const mode = btn.getAttribute('data-target-mode');
         btn.classList.toggle('active', !!(t && t.targetMode === mode));
-        btn.disabled = !t;
+        setDisabled(btn, !t);
       });
     }
 
     const upPanel = document.getElementById('upgrade-panel');
     if (upPanel) {
       const t = state.selectedTower;
-      upPanel.hidden = !t;
+      setHidden(upPanel, !t);
       document.querySelectorAll('[data-upgrade-path-label]').forEach((el) => {
         const path = el.getAttribute('data-upgrade-path-label');
-        if (t && PNTowers.pathLabel) el.textContent = PNTowers.pathLabel(t, path);
-        else el.textContent = path === 'range' ? 'Range' : 'Damage';
+        setText(el, t && PNTowers.pathLabel ? PNTowers.pathLabel(t, path) : path === 'range' ? 'Range' : 'Damage');
       });
       syncUpgradePath(state, 'range');
       syncUpgradePath(state, 'damage');
@@ -766,7 +774,7 @@
   }
 
   function paintTitleArt() {
-    /* splash uses assets/title-splash.png */
+    /* splash: assets/title-splash.webp with the PNG as fallback (index.html, styles.css) */
   }
 
   global.PNUI = {
@@ -777,6 +785,7 @@
     syncShop,
     syncControls,
     syncStatusPanel,
+    refreshEncoreBest,
     paintShopIcons,
     resetShopIcons,
     renderAdventure,

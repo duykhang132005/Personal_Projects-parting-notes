@@ -19,7 +19,10 @@
 
     <!-- Title -->
     <section id="screen-title" class="screen screen-title">
-      <img class="title-splash" src="assets/title-splash.png" alt="" />
+      <picture>
+        <source srcset="assets/title-splash.webp" type="image/webp" />
+        <img class="title-splash" src="assets/title-splash.png" alt="" width="1536" height="1024" decoding="async" />
+      </picture>
       <div class="title-scrim" aria-hidden="true"></div>
       <div class="title-center">
         <h1 class="title-logo">Parting <em>Notes</em></h1>
@@ -181,13 +184,13 @@
         </div>
 
         <div class="canvas-stack">
-          <canvas id="game" width="768" height="640" aria-label="Parting Notes playfield"></canvas>
+          <canvas id="game" width="768" height="640" role="img" aria-label="Parting Notes playfield"></canvas>
           <div id="end-overlay" class="end-overlay" hidden>
             <div class="end-card">
               <h2 id="end-title">Victory</h2>
               <p id="end-msg"></p>
               <div class="end-actions">
-                <button type="button" class="shop-btn active" id="btn-restart">Retry</button>
+                <button type="button" class="shop-btn active" id="btn-restart" aria-describedby="end-title end-msg">Retry</button>
                 <button type="button" class="shop-btn" id="btn-to-adventure">Adventure</button>
               </div>
             </div>

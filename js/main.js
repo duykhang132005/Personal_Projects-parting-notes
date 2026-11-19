@@ -139,6 +139,7 @@
   function resetStats() {
     PNStats.resetAll();
     encoreStartBest = 0;
+    if (PNUI.refreshEncoreBest) PNUI.refreshEncoreBest();
     if (state.screen === 'adventure') PNUI.renderAdventure(startLevel);
     if (state.screen === 'play' && director) PNUI.renderHud(state, director);
   }
@@ -203,27 +204,56 @@
   let last = performance.now();
   let raf = 0;
 
+  // Living notes, built at most once until something changes: update() clears it each frame,
+  // and spawns, leaks and kills clear it too, so every caller sees exactly what a fresh filter
+  // would give (same combat), without a new array per tower and per projectile.
+  let livingCache = null;
   function livingEnemies() {
-    return state.enemies.filter((e) => e.alive);
+    if (!livingCache) livingCache = state.enemies.filter((e) => e.alive);
+    return livingCache;
+  }
+  function invalidateLiving() {
+    livingCache = null;
   }
 
+  // True when the end card held focus as it closed, so the next screen can place it sensibly.
+  let endFocusPending = false;
   function hideEnd() {
     const ov = document.getElementById('end-overlay');
     if (ov) {
+      if (!ov.hidden && ov.contains(document.activeElement)) endFocusPending = true;
       ov.hidden = true;
       ov.classList.remove('visible');
     }
+  }
+
+  // After the end card closes: Play again / Retry lands on Start wave, Adventure on the map node.
+  function settleEndFocus(target) {
+    if (!endFocusPending) return;
+    endFocusPending = false;
+    if (target && typeof target.focus === 'function') target.focus();
   }
 
   function showEnd(kind, text) {
     const ov = document.getElementById('end-overlay');
     const title = document.getElementById('end-title');
     const msg = document.getElementById('end-msg');
+    const again = document.getElementById('btn-restart');
     if (title) title.textContent = kind;
     if (msg) msg.textContent = text;
+    // "Play again" after a win (Carol finale too), "Retry" after a loss or Encore over.
+    if (again) again.textContent = PNRules.endPrimaryLabel(kind);
     if (ov) {
       ov.hidden = false;
       ov.classList.add('visible');
+    }
+    // Keyboard and screen reader users land on the first action; its description reads the result.
+    if (again) {
+      try {
+        again.focus({ focusVisible: true });
+      } catch (_) {
+        again.focus();
+      }
     }
     const a = audio();
     if (a) {
@@ -250,10 +280,13 @@
     state.screen = 'adventure';
     state.paused = true;
     hideOnboarding();
+    hideEnd(); // before the screen swap, so a focused end card hands focus to the map
     PNUI.showScreen('adventure');
     if (keepPage !== true && PNUI.selectNextUnclearedPage) PNUI.selectNextUnclearedPage();
     PNUI.renderAdventure(startLevel);
     playMapMusic();
+    const mapEl = document.getElementById('adv-map');
+    settleEndFocus(mapEl && (mapEl.querySelector('.adv-node.is-focused') || mapEl.querySelector('.adv-node:not(:disabled)')));
   }
 
   // Each map page has its own excerpt; paging switches it (same file: no restart).
@@ -362,6 +395,21 @@
     scr.style.setProperty('--board-h', h + 'px');
   }
   window.addEventListener('resize', fitBoard);
+  // The header and controls can wrap mid-run (longer HUD text, narrow phones), which moves the
+  // board without a window resize. Watch them, at most one refit per frame. fitBoard only sets
+  // the board height, which does not resize these bars, so it cannot loop.
+  if (typeof ResizeObserver === 'function') {
+    let fitQueued = false;
+    const ro = new ResizeObserver(() => {
+      if (fitQueued) return;
+      fitQueued = true;
+      requestAnimationFrame(() => {
+        fitQueued = false;
+        fitBoard();
+      });
+    });
+    document.querySelectorAll('#screen-play .top-bar, #screen-play .controls').forEach((el) => ro.observe(el, { box: 'border-box' }));
+  }
 
   function isNarrow() {
     return !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches);
@@ -392,6 +440,7 @@
     canvas.width = map.width;
     canvas.height = map.height;
     encoreStartBest = level.endless && window.PNStats ? PNStats.getEncoreBest() : 0;
+    if (PNUI.refreshEncoreBest) PNUI.refreshEncoreBest();
     director = PNWaves.createDirector(level.waves, {
       betweenDelay: level.betweenDelay || 5,
       generate: level.endless ? level.generateWave : null,
@@ -401,6 +450,7 @@
     state.lives = level.lives;
     state.gold = level.gold;
     state.enemies = [];
+    invalidateLiving();
     state.towers = [];
     state.projectiles = [];
     state.occupied = Object.create(null);
@@ -441,6 +491,7 @@
       a.syncMuteButtons();
     }
     showOnboardingIfNeeded(level);
+    settleEndFocus(document.getElementById('btn-start'));
   }
 
   // Mid-run restart asks first; restart from a win or loss screen (Retry) does not.
@@ -512,6 +563,7 @@
       }
     }
     state.enemies.push(enemy);
+    invalidateLiving();
   }
 
   function isEndlessRun() {
@@ -521,7 +573,7 @@
   // Encore (endless) game over: results with waves survived and the best run.
   function endEndlessRun() {
     const survived = director ? director.wavesCleared() : 0;
-    PNStats.submitEncoreWaves(survived);
+    if (PNStats.submitEncoreWaves(survived) && PNUI.refreshEncoreBest) PNUI.refreshEncoreBest();
     // Compare with the best from when this run began (mid-run saves already raised the stored one).
     // Debug runs never save, so they never claim a new best.
     const newBest = PNStats.canWrite() && survived > encoreStartBest;
@@ -588,6 +640,7 @@
     const hit = PNRules.applyHit(enemy, filtered);
     if (!hit.applied) return false;
     if (hit.killed) {
+      invalidateLiving();
       state.gold += (enemy.gold || 0) + altoGoldBonus();
       if (a) a.kill();
     }
@@ -1263,10 +1316,13 @@
 
     const scaled = dt * state.speed;
     if (director.started) state.runTime += scaled;
+    invalidateLiving();
     const dir = director.update(scaled, livingEnemies().length);
     if (dir.spawned) spawnNote(dir.spawned);
     // Save the Encore best as each wave is cleared, so quitting mid-run keeps it.
-    if (dir.waveClear && isEndlessRun() && window.PNStats) PNStats.submitEncoreWaves(director.wavesCleared());
+    if (dir.waveClear && isEndlessRun() && window.PNStats) {
+      if (PNStats.submitEncoreWaves(director.wavesCleared()) && PNUI.refreshEncoreBest) PNUI.refreshEncoreBest();
+    }
     if (dir.victory) {
       state.status = 'won';
       state.message = currentLevel
@@ -1331,6 +1387,8 @@
       }
     }
 
+    // Leaks above set alive = false; rebuild once for the singers and projectiles below.
+    invalidateLiving();
     for (const t of state.towers) {
       PNTowers.updateTower(
         t,
@@ -1348,6 +1406,7 @@
     }
     state.projectiles = state.projectiles.filter((p) => p.alive);
     state.enemies = state.enemies.filter((e) => e.alive);
+    invalidateLiving();
 
     for (let i = effects.length - 1; i >= 0; i--) {
       const fx = effects[i];
