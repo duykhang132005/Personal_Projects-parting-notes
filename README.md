@@ -24,7 +24,7 @@ npx --yes serve .
 
 Each singer has two upgrade paths (crosspath max **3/2**). Column labels are voice-specific (e.g. Soprano Breath / Tone, Bass Tempo / Weight).
 
-Per-tower targeting: Front / Back / Closest / Highest HP.
+Per-tower targeting: Front / Back / Closest / Highest.
 
 **Dictionary:** each singer card lists every upgrade tier on both paths with a short line and its exact numbers (cost, damage, range, rate, chain, splash, aura and so on). The numbers are built from `js/towers.js` at runtime by `js/skills.js`, so they cannot drift from the game.
 
