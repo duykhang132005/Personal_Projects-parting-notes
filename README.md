@@ -10,7 +10,7 @@ Open `index.html` or:
 npx --yes serve .
 ```
 
-**Adventure** has ten stages from the lawn to closing night. Clear a stage to unlock the next (saved in this browser as `parting-notes-progress`). Clearing Closing Night also opens **A Christmas Carol**, a five-stave act on the last map page.
+**Adventure** has ten stages from the lawn to closing night. Clear a stage to unlock the next (saved in this browser as `parting-notes-progress`). Clearing Closing Night also opens **A Christmas Carol**, a 30-stave act on the six map pages after the main campaign.
 
 ## Towers
 
@@ -52,21 +52,46 @@ The game works down to 320px wide with no sideways scrolling; on very narrow pho
 
 ## A Christmas Carol
 
-A five-stave act on the fourth map page, following Dickens' story. It opens when Closing Night is cleared, and each stave opens when the one before it is cleared. It reuses the existing singers, notes and backdrops, with light snow on every stage.
+A 30-stave act that follows Dickens' story, one stave per movement of the Harvard Glee Club recording of A Christmas Carol, in track order. It opens when Closing Night is cleared, and the staves open one at a time: clear a stave to open the next. The act fills map pages 4 to 9 (five staves per page, titled by chapter of the story). It reuses the existing singers, notes and backdrops, with light snow on every stage. Clearing a Carol stave never changes the main campaign.
 
-| Stave | Stage | Music |
-|-------|-------|-------|
-| 1 | Marley's Ghost | Marley's Ghost |
-| 2 | Christmas Past | Fezziwig's Ball |
-| 3 | Christmas Present | The Ghost of Christmas Present |
-| 4 | Yet to Come | Ghost of the Future (Andy Clark returns) |
-| 5 | Christmas Morning | God Bless Us, Every One (Andy Clark again) |
+| Stave | Stage | Track | Map page | Waves |
+|-------|-------|-------|----------|-------|
+| 1 | The Truth from Above | The Truth from Above | Carol 1: Marley | Jazz |
+| 2 | In the Counting-House | In the Counting-House | Carol 1: Marley | Heavy notes, notes x1.2 HP |
+| 3 | Surplus Population | Surplus Population | Carol 1: Marley | Jazz, notes x1.1 HP |
+| 4 | God Rest You Merry, Gentlemen | God rest you merry, gentlemen | Carol 1: Marley | Jazz heavy |
+| 5 | Marley's Ghost | Marley's Ghost | Carol 1: Marley | Jazz heavy |
+| 6 | Mankind Was My Business | Mankind was my Business | Carol 2: Christmas Past | Jazz heavy |
+| 7 | Remember | Remember | Carol 2: Christmas Past | Folk, notes x1.05 HP |
+| 8 | The Ghost of Christmas Past | The Ghost of Christmas Past | Carol 2: Christmas Past | Jazz heavy, notes x1.1 HP |
+| 9 | Little Fan | Little Fan | Carol 2: Christmas Past | Folk, notes x1.1 HP |
+| 10 | Sussex Carol | Sussex Carol | Carol 2: Christmas Past | Jazz, notes x1.25 HP |
+| 11 | Fezziwig's Ball | Fezziwig's Ball | Carol 3: Past to Present | Folk, notes x1.15 HP |
+| 12 | Gain Is Loss | Gain is Loss | Carol 3: Past to Present | Jazz heavy, notes x1.2 HP |
+| 13 | Auld Lang Syne | Auld Lang Syne | Carol 3: Past to Present | Folk, notes x1.25 HP |
+| 14 | The Ghost of Christmas Present | The Ghost of Christmas Present | Carol 3: Past to Present | Folk, notes x1.3 HP |
+| 15 | A Christmas Journey | A Christmas Journey | Carol 3: Past to Present | Jazz and folk, notes x1.15 HP |
+| 16 | A Child Himself | A Child Himself | Carol 4: Christmas Present | Folk, notes x1.2 HP |
+| 17 | Deck the Halls | Deck the Halls | Carol 4: Christmas Present | Jazz and folk, notes x1.15 HP |
+| 18 | Bob Cratchit's House | Bob Cratchit's House | Carol 4: Christmas Present | Jazz heavy, notes x1.25 HP |
+| 19 | Silent Night | Silent Night | Carol 4: Christmas Present | Folk, notes x1.25 HP |
+| 20 | The Bell Struck Twelve | The Bell Struck Twelve | Carol 4: Christmas Present | Jazz and folk, notes x1.2 HP |
+| 21 | Ghost of the Future | Ghost of the Future | Carol 5: Yet to Come | Finale mix with Andy Clark |
+| 22 | The Body of a Man | The Body of a Man | Carol 5: Yet to Come | Jazz and folk, notes x1.2 HP |
+| 23 | Spirit of Tiny Tim | Spirit of Tiny Tim | Carol 5: Yet to Come | Folk, notes x1.25 HP |
+| 24 | Coventry Carol | Coventry Carol | Carol 5: Yet to Come | Jazz and folk, notes x1.2 HP |
+| 25 | The Spirits of All Three | The Spirits of All Three | Carol 5: Yet to Come | Finale mix with Andy Clark |
+| 26 | Poverty | Poverty | Carol 6: Christmas Morning | Jazz heavy, notes x1.3 HP |
+| 27 | Christmas Day | Christmas Day | Carol 6: Christmas Morning | Jazz and folk, notes x1.2 HP |
+| 28 | Back Payments | Back Payments | Carol 6: Christmas Morning | Folk, notes x1.2 HP |
+| 29 | God Bless Us, Every One | God Bless Us, Every One | Carol 6: Christmas Morning | Finale mix with Andy Clark |
+| 30 | It Came Upon the Midnight Clear | It came upon the midnight clear | Carol 6: Christmas Morning | Finale mix with Andy Clark, notes x1.05 HP |
 
-Christmas Past and Christmas Present are tuned tougher than their base wave sets: Past notes have x1.15 HP, Present notes x1.3 HP, and both stages bring slightly more notes, spaced closer together. Kill gold is unchanged.
+Difficulty ramps gently along the act. The five original staves (Marley's Ghost, Fezziwig's Ball, The Ghost of Christmas Present, Ghost of the Future, God Bless Us, Every One) keep their layouts, waves and tuning and anchor the curve; the new staves sit between them, using the existing wave sets with slightly more or fewer notes, closer spacing, and the same HP boost style (never above x1.35; kill gold is not scaled). Lives drop from 14 on the first stave to 10 from stave 18 on. Andy Clark appears in Ghost of the Future, The Spirits of All Three, God Bless Us, Every One and the finale. Clearing the last stave, It Came Upon the Midnight Clear, completes the act ("God bless us, every one. A Christmas Carol is complete.").
 
-Carol progress is read from the cleared list in `parting-notes-progress`, so older saves keep every stage and nothing new is added to the save. Carol stages have their own stats and Records rows.
+Carol progress is read from the cleared list in `parting-notes-progress`, so nothing new is added to the save. The five original staves keep their ids (`carol-marley`, `carol-past`, `carol-present`, `carol-future`, `carol-morning`), so saves from the five-stave act keep every clear: those staves stay open for replay, and play continues from the first stave that is not cleared yet (for most older saves that is stave 1, The Truth from Above). Only one new stave is open at a time. Carol stages have their own stats and Records rows.
 
-Music: A Christmas Carol, Harvard Glee Club course recordings. Each stave loads its own excerpt from `assets/audio/carol/` (MP3, 96 kbps) only when that stage starts. A missing file falls back to the usual play music without an error. The act's map page uses its own track too (see Audio).
+Music: A Christmas Carol, Harvard Glee Club course recordings. Each stave loads its own loop from `assets/audio/carol/` (MP3, 96 kbps) only when that stage starts, and each Carol map page has its own loop in `assets/audio/map/`. A missing file falls back to the usual play music without an error. See `assets/audio/README.md` for the excerpt behind every file.
 
 ## Records and stats
 
@@ -120,7 +145,7 @@ Tests: run `npm test` (or `node --test`). No extra install is required.
 ## Audio
 
 - **SFX:** procedural Web Audio (`js/audio.js`).
-- **BGM:** continuous across screens. **Fair Harvard plays only on the menu screens** (title, Dictionary, congrats). Each map page and each stage has its own Glee Club excerpt (96 kbps MP3 loops of 100 to 120 s, about 18 MB in all), loaded only when that screen opens. The same track does not restart on navigation, and switching tracks keeps the playback position in the loop.
+- **BGM:** continuous across screens. **The menu screens** (title, Dictionary, congrats) play `repertoire/title-01.mp3` (O Come, Ye Disconsolate, Oct 21 2026 Harvard Glee Club recording, 1:44 to 3:34). `fair-harvard.mp3` (public domain) remains the title-bed fallback and never plays on the map or in a stage. Each map page and each stage has its own Glee Club excerpt (96 kbps MP3 loops of 100 to 120 s, about 18 MB in all), loaded only when that screen opens. The same track does not restart on navigation, and switching tracks keeps the playback position in the loop.
 - Mute persists as `parting-notes-mute`.
 - **Effects volume** slider (0 to 100) sits under Music and scales every sound effect, with a short preview click. Saved as `pn_sfx_volume_v1`.
 - **Music volume** slider (0 to 100) sits next to Mute on the title screen and in Help during play and only changes music, not SFX. Saved as `pn_music_volume_v1`. Mute still silences everything; unmute returns to the slider level. Game hotkeys (except Esc) are ignored while the slider has focus.
@@ -130,11 +155,16 @@ Tests: run `npm test` (or `node --test`). No extra install is required.
 
 | Screen | File | Source (Harvard Glee Club) |
 |--------|------|----------------------------|
-| Title, Dictionary, congrats | `fair-harvard.mp3` | Fair Harvard |
+| Title, Dictionary, congrats | `repertoire/title-01.mp3` (fallback: `fair-harvard.mp3`) | O Come, Ye Disconsolate (Oct 21 2026 HGC), 1:44 to 3:34; Fair Harvard (public domain) if title-01 is missing |
 | Map page 1 (Outside to Lobby) | `map/page-1.mp3` | Shen khar venakhi (K-K), 0:04 to 1:44 |
 | Map page 2 (Hall to Encore) | `map/page-2.mp3` | Poulenc, 1:52 to 3:32 |
 | Map page 3 (Backstage to Closing Night) | `map/page-3.mp3` | O Come Ye Disconsolate, 0:04 to 1:44 |
-| Map page 4 (A Christmas Carol) | `map/page-4.mp3` | A Christmas Journey, 2:30 to 4:10 |
+| Map page 4 (Carol 1: Marley) | `map/page-4.mp3` | A Christmas Journey, 2:30 to 4:10 |
+| Map page 5 (Carol 2: Christmas Past) | `map/page-5.mp3` | Marley's Ghost, 2:54 to 4:06 |
+| Map page 6 (Carol 3: Past to Present) | `map/page-6.mp3` | Auld Lang Syne, 0:02 to 1:46 |
+| Map page 7 (Carol 4: Christmas Present) | `map/page-7.mp3` | Silent Night, 0:02 to 1:46 |
+| Map page 8 (Carol 5: Yet to Come) | `map/page-8.mp3` | Coventry Carol, 2:46 to 3:53 |
+| Map page 9 (Carol 6: Christmas Morning) | `map/page-9.mp3` | It came upon the midnight clear, 0:30 to 2:24 |
 | Lawn Approach | `stages/approach.mp3` | Harvard Football Songs, 0:04 to 1:54 |
 | Lobby Threshold | `stages/entrance.mp3` | Harvard Football Medley, 0:04 to 1:44 |
 | Backstage Hall | `stages/hallway.mp3` | Drunken Sailor, 0:40 to 2:30 |
@@ -147,7 +177,7 @@ Tests: run `npm test` (or `node --test`). No extra install is required.
 | Closing Night | `stages/closing.mp3` | O Come Ye Disconsolate, 2:20 to 4:05 |
 | Encore (endless) | `stages/endless.mp3` | Rossini, 4:50 to 6:32 |
 
-Files live under `assets/audio/map/` and `assets/audio/stages/` (Carol staves under `assets/audio/carol/`). They are local files and are not committed. If a stage file is missing the stage falls back to the shared beds below and then to the procedural pad, never to Fair Harvard.
+Files live under `assets/audio/map/` and `assets/audio/stages/` (Carol staves under `assets/audio/carol/`, one file per stave; see `assets/audio/README.md`). They are regular tracked files. If a stage file is missing the stage falls back to the shared beds below and then to the procedural pad, never to Fair Harvard.
 
 ### Adding music
 

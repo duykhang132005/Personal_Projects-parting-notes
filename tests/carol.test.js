@@ -2,14 +2,55 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const { loadScripts, loadLevels, memoryStorage } = require('./helpers/load-game.js');
+
+const ROOT = path.join(__dirname, '..');
 
 const PROGRESS_KEY = 'parting-notes-progress';
 const MAIN_IDS = [
   'approach', 'entrance', 'hallway', 'elevator', 'finale',
   'encore', 'greenroom', 'dock', 'tourbus', 'closing',
 ];
-const CAROL_IDS = ['carol-marley', 'carol-past', 'carol-present', 'carol-future', 'carol-morning'];
+// One stave per track of the recording, in track order (01 to 30).
+const TRACKS = [
+  ['carol-01-truth-from-above', 'The Truth from Above'],
+  ['carol-02-counting-house', 'In the Counting-House'],
+  ['carol-03-surplus-population', 'Surplus Population'],
+  ['carol-04-god-rest-you-merry', 'God Rest You Merry, Gentlemen'],
+  ['carol-marley', "Marley's Ghost"],
+  ['carol-06-mankind-was-my-business', 'Mankind Was My Business'],
+  ['carol-07-remember', 'Remember'],
+  ['carol-08-ghost-of-christmas-past', 'The Ghost of Christmas Past'],
+  ['carol-09-little-fan', 'Little Fan'],
+  ['carol-10-sussex-carol', 'Sussex Carol'],
+  ['carol-past', "Fezziwig's Ball"],
+  ['carol-12-gain-is-loss', 'Gain Is Loss'],
+  ['carol-13-auld-lang-syne', 'Auld Lang Syne'],
+  ['carol-present', 'The Ghost of Christmas Present'],
+  ['carol-15-christmas-journey', 'A Christmas Journey'],
+  ['carol-16-a-child-himself', 'A Child Himself'],
+  ['carol-17-deck-the-halls', 'Deck the Halls'],
+  ['carol-18-bob-cratchits-house', "Bob Cratchit's House"],
+  ['carol-19-silent-night', 'Silent Night'],
+  ['carol-20-bell-struck-twelve', 'The Bell Struck Twelve'],
+  ['carol-future', 'Ghost of the Future'],
+  ['carol-22-body-of-a-man', 'The Body of a Man'],
+  ['carol-23-spirit-of-tiny-tim', 'Spirit of Tiny Tim'],
+  ['carol-24-coventry-carol', 'Coventry Carol'],
+  ['carol-25-spirits-of-all-three', 'The Spirits of All Three'],
+  ['carol-26-poverty', 'Poverty'],
+  ['carol-27-christmas-day', 'Christmas Day'],
+  ['carol-28-back-payments', 'Back Payments'],
+  ['carol-morning', 'God Bless Us, Every One'],
+  ['carol-30-midnight-clear', 'It Came Upon the Midnight Clear'],
+];
+const CAROL_IDS = TRACKS.map((t) => t[0]);
+// The five staves of the first Carol release keep their ids, so old saves still match.
+const LEGACY_IDS = ['carol-marley', 'carol-past', 'carol-present', 'carol-future', 'carol-morning'];
+const LEGACY_SLOTS = [5, 11, 14, 21, 29];
+const FINAL_ID = 'carol-30-midnight-clear';
 
 function storeWith(progress) {
   const store = memoryStorage();
@@ -18,11 +59,14 @@ function storeWith(progress) {
 }
 
 describe('A Christmas Carol act', () => {
-  it('has five staves in story order with valid paths, blocks and waves', () => {
+  it('has 30 staves in track order with valid paths, blocks and waves', () => {
     const { context } = loadScripts(['js/levels.js', 'js/enemies.js']);
     const { PNLevels, PNEnemies } = context;
     const carol = PNLevels.CAROL_LEVELS;
+    assert.equal(carol.length, 30);
     assert.deepEqual(Array.from(carol, (l) => l.id), CAROL_IDS);
+    assert.deepEqual(Array.from(carol, (l) => l.name), TRACKS.map((t) => t[1]));
+    LEGACY_IDS.forEach((id, i) => assert.equal(PNLevels.getLevel(id).actIndex + 1, LEGACY_SLOTS[i], id + ' sits in its track slot'));
     // The main campaign is untouched.
     assert.deepEqual(Array.from(PNLevels.LEVELS, (l) => l.id), MAIN_IDS);
 
@@ -71,9 +115,15 @@ describe('A Christmas Carol act', () => {
       });
     });
 
-    // Andy Clark returns in Yet to Come.
-    const future = PNLevels.getLevel('carol-future');
-    assert.ok(future.waves.some((w) => w.entries.some((e) => e.type === 'andy')));
+    // Every new layout is its own map, not a copy of another stage.
+    const shapes = new Set(PNLevels.ALL_LEVELS.map((l) => JSON.stringify(l.path)));
+    assert.equal(shapes.size, PNLevels.ALL_LEVELS.length, 'no two stages share a path');
+
+    // Andy Clark returns in Ghost of the Future, The Spirits of All Three, God Bless Us and the finale.
+    const withAndy = carol.filter((l) => l.waves.some((w) => w.entries.some((e) => e.type === 'andy')));
+    assert.deepEqual(Array.from(withAndy, (l) => l.id), [
+      'carol-future', 'carol-25-spirits-of-all-three', 'carol-morning', FINAL_ID,
+    ]);
   });
 
   it('maps each stave to its own audio track under assets/audio/carol', () => {
@@ -85,6 +135,9 @@ describe('A Christmas Carol act', () => {
       assert.equal(url, 'assets/audio/carol/' + PNLevels.CAROL_LEVELS[i].music + '.mp3');
     });
     assert.equal(new Set(urls).size, urls.length, 'tracks are not shared');
+    urls.forEach((url) => assert.ok(fs.existsSync(path.join(ROOT, url)), url + ' exists on disk'));
+    // The five original files keep their names.
+    LEGACY_IDS.forEach((id) => assert.equal(PNLevels.trackUrl(id), 'assets/audio/carol/' + id + '.mp3'));
     assert.equal(PNLevels.trackUrl('carol-marley'), 'assets/audio/carol/carol-marley.mp3');
     // Main stages and Encore use their own excerpts outside the carol folder.
     PNLevels.LEVELS.concat([PNLevels.ENDLESS_LEVEL]).forEach((l) => {
@@ -103,8 +156,9 @@ describe('A Christmas Carol act', () => {
 
     PNLevels.markCleared('closing');
     assert.equal(PNLevels.isCarolUnlocked(), true);
-    assert.equal(PNLevels.isLevelUnlocked('carol-marley'), true);
-    assert.equal(PNLevels.isLevelUnlocked('carol-past'), false);
+    assert.equal(PNLevels.isLevelUnlocked(CAROL_IDS[0]), true);
+    assert.equal(PNLevels.carolFrontier().id, CAROL_IDS[0]);
+    CAROL_IDS.slice(1).forEach((id) => assert.equal(PNLevels.isLevelUnlocked(id), false, id + ' waits'));
 
     for (let i = 0; i < CAROL_IDS.length; i++) {
       assert.equal(PNLevels.isLevelUnlocked(CAROL_IDS[i]), true, CAROL_IDS[i] + ' is open');
@@ -112,7 +166,7 @@ describe('A Christmas Carol act', () => {
         assert.equal(PNLevels.isLevelUnlocked(CAROL_IDS[i + 1]), false, CAROL_IDS[i + 1] + ' waits');
         assert.equal(PNLevels.getNextLevel(CAROL_IDS[i]).id, CAROL_IDS[i + 1]);
       } else {
-        assert.equal(PNLevels.getNextLevel(CAROL_IDS[i]), null, 'Christmas Morning ends the act');
+        assert.equal(PNLevels.getNextLevel(CAROL_IDS[i]), null, 'It Came Upon the Midnight Clear ends the act');
       }
       const p = PNLevels.markCleared(CAROL_IDS[i]);
       assert.ok(p.cleared.includes(CAROL_IDS[i]));
@@ -120,6 +174,7 @@ describe('A Christmas Carol act', () => {
       assert.equal(p.unlocked, 10);
     }
     assert.ok(CAROL_IDS.every((id) => PNLevels.isLevelUnlocked(id)));
+    assert.equal(PNLevels.carolFrontier(), null, 'the act is complete');
   });
 
   it('clearing a Carol stave saves it without unlocking main stages', () => {
@@ -127,12 +182,13 @@ describe('A Christmas Carol act', () => {
       localStorage: storeWith({ unlocked: 2, cleared: ['approach', 'closing'], towersUnlocked: [] }),
     });
     const PNLevels = context.PNLevels;
-    const p = PNLevels.markCleared('carol-marley');
+    const p = PNLevels.markCleared(CAROL_IDS[0]);
     assert.equal(p.unlocked, 2);
     assert.equal(PNLevels.isLevelUnlocked('hallway'), false);
-    assert.equal(PNLevels.isLevelUnlocked('carol-past'), true);
+    assert.equal(PNLevels.isLevelUnlocked(CAROL_IDS[1]), true);
+    assert.equal(PNLevels.isLevelUnlocked(CAROL_IDS[2]), false);
     const stored = JSON.parse(localStorage.getItem(PROGRESS_KEY));
-    assert.ok(stored.cleared.includes('carol-marley'));
+    assert.ok(stored.cleared.includes(CAROL_IDS[0]));
     assert.equal(stored.unlocked, 2);
   });
 
@@ -146,8 +202,8 @@ describe('A Christmas Carol act', () => {
     assert.deepEqual(Array.from(p.cleared), MAIN_IDS);
     assert.ok(p.towersUnlocked.includes('andy'));
     MAIN_IDS.forEach((id) => assert.equal(PNLevels.isLevelUnlocked(id), true, id + ' stays open'));
-    assert.equal(PNLevels.isLevelUnlocked('carol-marley'), true, 'the act opens for finished saves');
-    assert.equal(PNLevels.isLevelUnlocked('carol-past'), false);
+    assert.equal(PNLevels.isLevelUnlocked(CAROL_IDS[0]), true, 'the act opens for finished saves');
+    assert.equal(PNLevels.isLevelUnlocked(CAROL_IDS[1]), false);
     const stored = JSON.parse(localStorage.getItem(PROGRESS_KEY));
     assert.equal(stored.unlocked, 10);
     assert.deepEqual(stored.cleared, MAIN_IDS);
@@ -164,7 +220,47 @@ describe('A Christmas Carol act', () => {
     store.setItem(PROGRESS_KEY, '{not json');
     const broken = loadLevels({ localStorage: store }).context.PNLevels;
     assert.equal(broken.loadProgress().unlocked, 1);
-    assert.equal(broken.isLevelUnlocked('carol-marley'), false);
+    assert.equal(broken.isLevelUnlocked(CAROL_IDS[0]), false);
+  });
+
+  it('keeps clears from five-stave saves and continues one stave at a time', () => {
+    // Mid-act save from the five-stave release: Marley and Christmas Past were cleared.
+    const midSave = { unlocked: 10, cleared: MAIN_IDS.concat(['carol-marley', 'carol-past']), towersUnlocked: ['andy'] };
+    const { context, localStorage } = loadLevels({ localStorage: storeWith(midSave) });
+    const PNLevels = context.PNLevels;
+    const p = PNLevels.loadProgress();
+    assert.deepEqual(Array.from(p.cleared), midSave.cleared, 'no clears are lost');
+    assert.equal(p.unlocked, 10);
+    // Cleared staves stay open for replay; play continues from the first new stave.
+    assert.equal(PNLevels.isLevelUnlocked('carol-marley'), true);
+    assert.equal(PNLevels.isLevelUnlocked('carol-past'), true);
+    assert.equal(PNLevels.carolFrontier().id, CAROL_IDS[0]);
+    assert.equal(PNLevels.isLevelUnlocked(CAROL_IDS[0]), true);
+    const openNew = CAROL_IDS.filter((id) => !LEGACY_IDS.includes(id) && PNLevels.isLevelUnlocked(id));
+    assert.deepEqual(openNew, [CAROL_IDS[0]], 'only one new stave is open');
+    // Loading does not rewrite the save.
+    assert.deepEqual(JSON.parse(localStorage.getItem(PROGRESS_KEY)), midSave);
+
+    // Clearing staves 1 to 4 reaches Marley (already cleared), then stave 6 opens.
+    CAROL_IDS.slice(0, 4).forEach((id) => PNLevels.markCleared(id));
+    assert.equal(PNLevels.carolFrontier().id, CAROL_IDS[5]);
+    assert.equal(PNLevels.isLevelUnlocked(CAROL_IDS[5]), true);
+    assert.equal(PNLevels.isLevelUnlocked(CAROL_IDS[6]), false);
+    assert.equal(PNLevels.getNextLevel(CAROL_IDS[3]).id, 'carol-marley');
+
+    // A save that finished the five-stave act keeps all five clears; the finale still waits.
+    const doneSave = { unlocked: 10, cleared: MAIN_IDS.concat(LEGACY_IDS), towersUnlocked: ['andy'] };
+    const done = loadLevels({ localStorage: storeWith(doneSave) }).context.PNLevels;
+    assert.deepEqual(Array.from(done.loadProgress().cleared), doneSave.cleared);
+    LEGACY_IDS.forEach((id) => assert.equal(done.isLevelUnlocked(id), true, id + ' stays open'));
+    assert.equal(done.carolFrontier().id, CAROL_IDS[0]);
+    assert.equal(done.isLevelUnlocked(FINAL_ID), false);
+    CAROL_IDS.filter((id) => !LEGACY_IDS.includes(id) && id !== FINAL_ID).forEach((id) => {
+      assert.equal(done.isLevelUnlocked(id), true, id + ' opens in turn');
+      done.markCleared(id);
+    });
+    assert.equal(done.isLevelUnlocked(FINAL_ID), true);
+    assert.equal(done.loadProgress().unlocked, 10, 'Carol clears never move the main campaign');
   });
 });
 
@@ -184,10 +280,12 @@ describe('Carol stave tuning', () => {
     assert.equal(past.length, 1);
     assert.equal(present.length, 1);
     assert.ok(past[0] > 1 && present[0] > past[0]);
-    // The other staves and every main stage are unchanged.
+    // The other original staves and every main stage are unchanged.
     ['carol-marley', 'carol-future', 'carol-morning'].concat(MAIN_IDS).forEach((id) => {
       assert.deepEqual(mults(id), [1], id + ' keeps base HP');
     });
+    // New staves use the same style of HP boost, never above x1.35.
+    PNLevels.CAROL_LEVELS.forEach((l) => mults(l.id).forEach((m) => assert.ok(m >= 1 && m <= 1.35, l.id + ' HP x' + m)));
     // The HP boost reaches the spawned notes; kill gold is not scaled.
     const director = PNWaves.createDirector(PNLevels.getLevel('carol-present').waves, { betweenDelay: 3 });
     director.begin();
@@ -196,6 +294,29 @@ describe('Carol stave tuning', () => {
     assert.ok(spawned, 'first note spawns');
     assert.equal(spawned.hpMult, present[0]);
     assert.equal(spawned.goldMult, undefined);
+  });
+
+  it('ramps difficulty gently across the act', () => {
+    const { context } = loadScripts(['js/levels.js', 'js/enemies.js']);
+    const { PNLevels, PNEnemies } = context;
+    // Weighted note HP: jazz and folk notes take more work to clear than plain notes.
+    const weight = { normal: 1, jazz: 1.6, folk: 1.4 };
+    const load = (l) => l.waves.reduce((sum, w) => sum + w.entries.reduce((s, e) => {
+      const t = PNEnemies.TYPES[e.type];
+      return s + e.count * t.hp * (e.hpMult || 1) * (t.isBoss ? 1 : weight[e.style]);
+    }, 0), 0);
+    const loads = PNLevels.CAROL_LEVELS.map(load);
+    // Each map page of five is harder on average than the page before it.
+    const pages = [0, 1, 2, 3, 4, 5].map((p) => loads.slice(p * 5, p * 5 + 5).reduce((a, b) => a + b, 0) / 5);
+    for (let p = 1; p < pages.length; p++) assert.ok(pages[p] > pages[p - 1], 'page ' + (p + 1) + ' is harder');
+    // The first stave is the gentlest and the finale the hardest.
+    assert.equal(Math.min(...loads), loads[0]);
+    assert.equal(Math.max(...loads), loads[loads.length - 1]);
+    // No stave jumps far past the one before it, and lives never go up along the act.
+    for (let i = 1; i < loads.length; i++) {
+      assert.ok(loads[i] <= loads[i - 1] * 1.25, PNLevels.CAROL_LEVELS[i].id + ' is not a spike');
+      assert.ok(PNLevels.CAROL_LEVELS[i].lives <= PNLevels.CAROL_LEVELS[i - 1].lives);
+    }
   });
 });
 

@@ -391,7 +391,7 @@
         'You walked the choir from the lawn to Closing Night and held the stage ' +
         'against jazz, folk, and conductor Andy Clark. Andy joins the choir: ' +
         'hire him from the shop on your next run. The house is on its feet. ' +
-        'A Christmas Carol is now open on the last map page.';
+        'A Christmas Carol is now open on the next map page.';
     }
     PNUI.showScreen('congrats');
     endFocusPending = false;

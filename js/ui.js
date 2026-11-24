@@ -250,8 +250,14 @@
     { label: 'Outside → Lobby', indices: [0, 1, 2, 3] },
     { label: 'Hall → Encore', indices: [4, 5, 6] },
     { label: 'Backstage → Closing Night', indices: [7, 8, 9] },
-    // A Christmas Carol act: five staves, opened by clearing Closing Night.
-    { label: 'A Christmas Carol', indices: [10, 11, 12, 13, 14], act: 'carol' },
+    // A Christmas Carol act: 30 staves on six pages of five, in story order, opened by
+    // clearing Closing Night.
+    { label: 'Carol 1: Marley', indices: [10, 11, 12, 13, 14], act: 'carol' },
+    { label: 'Carol 2: Christmas Past', indices: [15, 16, 17, 18, 19], act: 'carol' },
+    { label: 'Carol 3: Past to Present', indices: [20, 21, 22, 23, 24], act: 'carol' },
+    { label: 'Carol 4: Christmas Present', indices: [25, 26, 27, 28, 29], act: 'carol' },
+    { label: 'Carol 5: Yet to Come', indices: [30, 31, 32, 33, 34], act: 'carol' },
+    { label: 'Carol 6: Christmas Morning', indices: [35, 36, 37, 38, 39], act: 'carol' },
   ];
   // Encore (endless) sits after Closing Night on this page.
   const ENCORE_PAGE = MAP_PAGES.findIndex((pg) => pg.indices.includes(9));
@@ -282,7 +288,16 @@
       return best > 0 ? 'Best run: ' + best + (best === 1 ? ' wave survived.' : ' waves survived.') : 'No Encore runs recorded yet.';
     }
     if (level.act && !unlocked) {
+      const progress = PNLevels.loadProgress();
+      if (PNLevels.isCarolUnlocked && !PNLevels.isCarolUnlocked(progress)) {
+        return 'Clear Closing Night to open A Christmas Carol.';
+      }
       const prev = level.actIndex > 0 ? PNLevels.CAROL_LEVELS[level.actIndex - 1] : null;
+      // Older saves can have a cleared stave here with an uncleared one earlier in the act.
+      const frontier = PNLevels.carolFrontier ? PNLevels.carolFrontier(progress) : null;
+      if (prev && progress.cleared.includes(prev.id) && frontier) {
+        return 'Clear ' + frontier.name + ' first to open this stave.';
+      }
       return prev ? 'Clear ' + prev.name + ' to open this stave.' : 'Clear Closing Night to open A Christmas Carol.';
     }
     return PNStats.detailText(PNStats.get(level.id));
@@ -375,7 +390,8 @@
     const page = MAP_PAGES[adventureMapPage] || MAP_PAGES[0];
     if (pageLabel) {
       pageLabel.textContent =
-        page.label + ' · ' + (adventureMapPage + 1) + ' / ' + MAP_PAGES.length;
+        // No-break spaces keep the page count together when a long label wraps on phones.
+        page.label + ' · ' + (adventureMapPage + 1) + '\u00a0/\u00a0' + MAP_PAGES.length;
     }
     if (prevBtn) prevBtn.disabled = adventureMapPage <= 0;
     if (nextBtn) nextBtn.disabled = adventureMapPage >= MAP_PAGES.length - 1;
@@ -489,7 +505,7 @@
   }
 
   // Pick the map page with the first stage that has not been cleared and highlight that node.
-  // After Closing Night that is the next open Carol stave (Christmas Morning once the act is
+  // After Closing Night that is the next open Carol stave (the last stave once the act is
   // done too). Does not render or move keyboard focus.
   function selectNextUnclearedPage() {
     const progress = PNLevels.loadProgress();
