@@ -174,3 +174,99 @@ describe('end card', () => {
     assert.equal(R.endPrimaryLabel('Encore over'), 'Retry');
   });
 });
+
+describe('map static layer cache', () => {
+  function stubCtx(counts) {
+    const grad = { addColorStop() {} };
+    const noop = () => {};
+    return {
+      save: noop,
+      restore: noop,
+      beginPath: noop,
+      closePath: noop,
+      moveTo: noop,
+      lineTo: noop,
+      arc: noop,
+      ellipse: noop,
+      rect: noop,
+      roundRect: noop,
+      quadraticCurveTo: noop,
+      bezierCurveTo: noop,
+      translate: noop,
+      rotate: noop,
+      scale: noop,
+      setLineDash: noop,
+      fill() { counts.drawOps += 1; },
+      stroke() { counts.drawOps += 1; },
+      fillRect() { counts.drawOps += 1; },
+      strokeRect() { counts.drawOps += 1; },
+      fillText() { counts.drawOps += 1; },
+      strokeText() { counts.drawOps += 1; },
+      drawImage(img, x, y) { counts.blits.push({ img, x, y }); },
+      createLinearGradient() { return grad; },
+      createRadialGradient() { return grad; },
+    };
+  }
+
+  const sampleLevel = {
+    id: 'approach',
+    index: 0,
+    cols: 12,
+    rows: 10,
+    tile: 64,
+    path: [[0, 4], [5, 4], [5, 6], [11, 6]],
+    blocks: [[2, 2]],
+    snow: true,
+  };
+
+  it('falls back to direct drawing when document is absent', () => {
+    const { context } = loadScripts(['js/map.js']);
+    const map = context.PNMap.createMap(sampleLevel);
+    const counts = { drawOps: 0, blits: [] };
+    map.draw(stubCtx(counts));
+    assert.ok(counts.drawOps > 0);
+    assert.equal(counts.blits.length, 0);
+  });
+
+  it('pre-renders static layers once onto an offscreen 768x640 canvas and blits on draw', () => {
+    const offCounts = { drawOps: 0, blits: [] };
+    const offCanvas = {
+      width: 0,
+      height: 0,
+      getContext(kind) {
+        return kind === '2d' ? stubCtx(offCounts) : null;
+      },
+    };
+    let created = 0;
+    const { context } = loadScripts(['js/map.js'], {
+      globals: {
+        document: {
+          createElement(tag) {
+            if (tag === 'canvas') {
+              created += 1;
+              return offCanvas;
+            }
+            return null;
+          },
+        },
+      },
+    });
+    const map = context.PNMap.createMap(sampleLevel);
+    assert.equal(created, 1);
+    assert.equal(offCanvas.width, 768);
+    assert.equal(offCanvas.height, 640);
+    assert.ok(offCounts.drawOps > 0);
+    const initialOffOps = offCounts.drawOps;
+
+    const screenCounts = { drawOps: 0, blits: [] };
+    const screenCtx = stubCtx(screenCounts);
+    map.draw(screenCtx);
+    map.draw(screenCtx);
+    assert.equal(screenCounts.drawOps, 0);
+    assert.equal(screenCounts.blits.length, 2);
+    assert.equal(screenCounts.blits[0].img, offCanvas);
+    assert.equal(screenCounts.blits[0].x, 0);
+    assert.equal(screenCounts.blits[0].y, 0);
+    assert.equal(offCounts.drawOps, initialOffOps);
+  });
+});

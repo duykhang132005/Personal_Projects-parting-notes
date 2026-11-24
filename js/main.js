@@ -216,18 +216,37 @@
     livingCache = null;
   }
 
-  // True when the end card held focus as it closed, so the next screen can place it sensibly.
+  function focusPrimary(el) {
+    if (!el || el.hidden || el.disabled || typeof el.focus !== 'function') return;
+    try {
+      el.focus({ focusVisible: true });
+    } catch (_) {
+      el.focus();
+    }
+  }
+
+  function isFocusedInside(id) {
+    const el = document.getElementById(id);
+    return !!(el && !el.hidden && el.contains(document.activeElement));
+  }
+
+  // True when an end or win screen held focus as it closed, so the next screen can place it sensibly.
   let endFocusPending = false;
+  function noteEndFocus() {
+    if (isFocusedInside('end-overlay') || isFocusedInside('screen-transition') || isFocusedInside('screen-congrats')) {
+      endFocusPending = true;
+    }
+  }
   function hideEnd() {
+    noteEndFocus();
     const ov = document.getElementById('end-overlay');
     if (ov) {
-      if (!ov.hidden && ov.contains(document.activeElement)) endFocusPending = true;
       ov.hidden = true;
       ov.classList.remove('visible');
     }
   }
 
-  // After the end card closes: Play again / Retry lands on Start wave, Adventure on the map node.
+  // After an end or win screen closes: next stage / Retry lands on Start wave, Adventure on the map node, Title on Play.
   function settleEndFocus(target) {
     if (!endFocusPending) return;
     endFocusPending = false;
@@ -248,13 +267,7 @@
       ov.classList.add('visible');
     }
     // Keyboard and screen reader users land on the first action; its description reads the result.
-    if (again) {
-      try {
-        again.focus({ focusVisible: true });
-      } catch (_) {
-        again.focus();
-      }
-    }
+    focusPrimary(again);
     const a = audio();
     if (a) {
       if (kind === 'Victory') a.win();
@@ -264,6 +277,7 @@
 
   function goTitle() {
     closePlayHelp();
+    noteEndFocus();
     state.screen = 'title';
     state.paused = true;
     hideOnboarding();
@@ -271,6 +285,7 @@
     const a = audio();
     if (a && a.bgmStart) a.bgmStart('title');
     requestAnimationFrame(() => PNUI.paintTitleArt());
+    settleEndFocus(document.getElementById('btn-adventure'));
   }
 
   // keepPage: coming back from the Dictionary keeps the page the player was on. Otherwise the map
@@ -360,6 +375,8 @@
       cont.textContent = next ? 'Enter ' + next.name : 'Continue';
     }
     PNUI.showScreen('transition');
+    endFocusPending = false;
+    focusPrimary(cont && !cont.hidden ? cont : document.getElementById('btn-transition-adventure'));
   }
 
   function goCongrats() {
@@ -377,6 +394,8 @@
         'A Christmas Carol is now open on the last map page.';
     }
     PNUI.showScreen('congrats');
+    endFocusPending = false;
+    focusPrimary(document.getElementById('btn-congrats-adventure'));
     const a = audio();
     if (a) {
       if (a.bgmStart) a.bgmStart('title');
@@ -491,7 +510,8 @@
       a.syncMuteButtons();
     }
     showOnboardingIfNeeded(level);
-    settleEndFocus(document.getElementById('btn-start'));
+    if (isOnboardingOpen()) endFocusPending = false;
+    else settleEndFocus(document.getElementById('btn-start'));
   }
 
   // Mid-run restart asks first; restart from a win or loss screen (Retry) does not.
@@ -1231,8 +1251,8 @@
     // A focused button would also react to Space on key release. Space belongs to the game while
     // playing, unless a dialog is open and the player is using its buttons.
     document.addEventListener('keyup', (ev) => {
-      if (state.screen !== 'play' || ev.key !== ' ') return;
-      if (isPlayHelpOpen() || isOnboardingOpen()) return;
+      if (state.screen !== 'play' || state.status !== 'playing' || ev.key !== ' ') return;
+      if (isPlayHelpOpen() || isOnboardingOpen() || isRestartConfirmOpen()) return;
       ev.preventDefault();
     });
 
@@ -1266,6 +1286,8 @@
       }
       // Help is modal: no build, sell or wave hotkeys behind it.
       if (isPlayHelpOpen()) return;
+      // End card is up: let Space/Enter activate its buttons and keep play hotkeys quiet.
+      if (state.status !== 'playing') return;
       const hotkeys = { '1': 'soprano', '2': 'alto', '3': 'tenor', '4': 'bass', '5': 'andy' };
       if (hotkeys[ev.key]) {
         const id = hotkeys[ev.key];

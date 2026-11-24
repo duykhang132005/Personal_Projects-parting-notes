@@ -1287,6 +1287,31 @@
       ctx.setLineDash([]);
     }
 
+    function drawStaticLayers(ctx) {
+      d.bg(ctx);
+      d.build(ctx);
+      drawThemedPath(ctx);
+      d.props(ctx);
+      d.markers(ctx);
+      drawSnow(ctx);
+    }
+
+    // Pre-render the static stage once onto an offscreen canvas so draw() is a single blit.
+    // Falls back to direct drawing when document or a 2D context is unavailable (e.g. Node tests).
+    let staticCanvas = null;
+    if (typeof document !== 'undefined' && document && typeof document.createElement === 'function') {
+      const off = document.createElement('canvas');
+      if (off && typeof off.getContext === 'function') {
+        off.width = width;
+        off.height = height;
+        const offCtx = off.getContext('2d');
+        if (offCtx) {
+          drawStaticLayers(offCtx);
+          staticCanvas = off;
+        }
+      }
+    }
+
     return {
       COLS: cols,
       ROWS: rows,
@@ -1304,12 +1329,11 @@
       themeId: theme.id,
       themeIndex: themeIdx,
       draw(ctx) {
-        d.bg(ctx);
-        d.build(ctx);
-        drawThemedPath(ctx);
-        d.props(ctx);
-        d.markers(ctx);
-        drawSnow(ctx);
+        if (staticCanvas) {
+          ctx.drawImage(staticCanvas, 0, 0);
+        } else {
+          drawStaticLayers(ctx);
+        }
       },
       drawPlacementHint,
       canBuild(c, r) {
