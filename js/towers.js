@@ -4,7 +4,7 @@
     { id: 'front', label: 'Front' },
     { id: 'back', label: 'Back' },
     { id: 'closest', label: 'Closest' },
-    { id: 'strongest', label: 'Highest HP' },
+    { id: 'strongest', label: 'Highest' },
   ];
 
   const DEFS = {
