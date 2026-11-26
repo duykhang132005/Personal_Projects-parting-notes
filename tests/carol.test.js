@@ -231,36 +231,51 @@ describe('A Christmas Carol act', () => {
     const p = PNLevels.loadProgress();
     assert.deepEqual(Array.from(p.cleared), midSave.cleared, 'no clears are lost');
     assert.equal(p.unlocked, 10);
-    // Cleared staves stay open for replay; play continues from the first new stave.
+    // Cleared staves stay open for replay; play continues after the last cleared stave
+    // (Christmas Past is stave 11, so the frontier is Gain Is Loss).
     assert.equal(PNLevels.isLevelUnlocked('carol-marley'), true);
     assert.equal(PNLevels.isLevelUnlocked('carol-past'), true);
-    assert.equal(PNLevels.carolFrontier().id, CAROL_IDS[0]);
-    assert.equal(PNLevels.isLevelUnlocked(CAROL_IDS[0]), true);
+    assert.equal(PNLevels.carolFrontier().id, 'carol-12-gain-is-loss');
+    assert.equal(PNLevels.isLevelUnlocked('carol-12-gain-is-loss'), true);
     const openNew = CAROL_IDS.filter((id) => !LEGACY_IDS.includes(id) && PNLevels.isLevelUnlocked(id));
-    assert.deepEqual(openNew, [CAROL_IDS[0]], 'only one new stave is open');
+    assert.deepEqual(openNew, ['carol-12-gain-is-loss'], 'only one new stave is open');
+    CAROL_IDS.slice(0, 4).forEach((id) => {
+      assert.equal(PNLevels.isLevelUnlocked(id), false, id + ' stays closed behind the resume point');
+    });
     // Loading does not rewrite the save.
     assert.deepEqual(JSON.parse(localStorage.getItem(PROGRESS_KEY)), midSave);
 
-    // Clearing staves 1 to 4 reaches Marley (already cleared), then stave 6 opens.
-    CAROL_IDS.slice(0, 4).forEach((id) => PNLevels.markCleared(id));
-    assert.equal(PNLevels.carolFrontier().id, CAROL_IDS[5]);
-    assert.equal(PNLevels.isLevelUnlocked(CAROL_IDS[5]), true);
-    assert.equal(PNLevels.isLevelUnlocked(CAROL_IDS[6]), false);
-    assert.equal(PNLevels.getNextLevel(CAROL_IDS[3]).id, 'carol-marley');
-
-    // A save that finished the five-stave act keeps all five clears; the finale still waits.
+    // A save that finished the five-stave act keeps all five clears and continues at the finale,
+    // the first uncleared stave after God Bless Us, Every One.
     const doneSave = { unlocked: 10, cleared: MAIN_IDS.concat(LEGACY_IDS), towersUnlocked: ['andy'] };
     const done = loadLevels({ localStorage: storeWith(doneSave) }).context.PNLevels;
     assert.deepEqual(Array.from(done.loadProgress().cleared), doneSave.cleared);
     LEGACY_IDS.forEach((id) => assert.equal(done.isLevelUnlocked(id), true, id + ' stays open'));
-    assert.equal(done.carolFrontier().id, CAROL_IDS[0]);
-    assert.equal(done.isLevelUnlocked(FINAL_ID), false);
-    CAROL_IDS.filter((id) => !LEGACY_IDS.includes(id) && id !== FINAL_ID).forEach((id) => {
-      assert.equal(done.isLevelUnlocked(id), true, id + ' opens in turn');
-      done.markCleared(id);
-    });
+    assert.equal(done.carolFrontier().id, FINAL_ID);
     assert.equal(done.isLevelUnlocked(FINAL_ID), true);
+    CAROL_IDS.filter((id) => !LEGACY_IDS.includes(id) && id !== FINAL_ID).forEach((id) => {
+      assert.equal(done.isLevelUnlocked(id), false, id + ' stays closed until the finale, or until it is reached in order');
+    });
     assert.equal(done.loadProgress().unlocked, 10, 'Carol clears never move the main campaign');
+  });
+
+  it('opens the stave after Marley, not stave 1, when an old save only cleared carol-marley', () => {
+    const old = { unlocked: 10, cleared: MAIN_IDS.concat(['carol-marley']), towersUnlocked: ['andy'] };
+    const { context, localStorage } = loadLevels({ localStorage: storeWith(old) });
+    const PNLevels = context.PNLevels;
+    assert.deepEqual(Array.from(PNLevels.loadProgress().cleared), old.cleared, 'no clears are lost');
+    assert.equal(PNLevels.isLevelUnlocked('carol-marley'), true, 'Marley stays open for replay');
+    assert.equal(PNLevels.carolFrontier().id, 'carol-06-mankind-was-my-business');
+    assert.equal(PNLevels.isLevelUnlocked('carol-06-mankind-was-my-business'), true);
+    assert.equal(PNLevels.isLevelUnlocked(CAROL_IDS[0]), false, 'stave 1 is not opened as a new stave');
+    CAROL_IDS.slice(0, 4).forEach((id) => {
+      assert.equal(PNLevels.isLevelUnlocked(id), false, id + ' is not open as new');
+    });
+    CAROL_IDS.slice(6).forEach((id) => {
+      assert.equal(PNLevels.isLevelUnlocked(id), false, id + ' still waits');
+    });
+    assert.equal(PNLevels.loadProgress().unlocked, 10);
+    assert.deepEqual(JSON.parse(localStorage.getItem(PROGRESS_KEY)), old);
   });
 });
 

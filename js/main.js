@@ -284,7 +284,6 @@
     PNUI.showScreen('title');
     const a = audio();
     if (a && a.bgmStart) a.bgmStart('title');
-    requestAnimationFrame(() => PNUI.paintTitleArt());
     settleEndFocus(document.getElementById('btn-adventure'));
   }
 

@@ -54,6 +54,8 @@ The game works down to 320px wide with no sideways scrolling; on very narrow pho
 
 A 30-stave act that follows Dickens' story, one stave per movement of the Harvard Glee Club recording of A Christmas Carol, in track order. It opens when Closing Night is cleared, and the staves open one at a time: clear a stave to open the next. The act fills map pages 4 to 9 (five staves per page, titled by chapter of the story). It reuses the existing singers, notes and backdrops, with light snow on every stage. Clearing a Carol stave never changes the main campaign.
 
+Carol progress is read from the cleared list in `parting-notes-progress`. The five original staves keep their ids, so older saves keep every clear and those staves stay open for replay. Play continues from the first uncleared stave after the last cleared one. A save that only cleared Marley's Ghost therefore opens Mankind Was My Business, not The Truth from Above. If nothing is left after the last cleared stave, play continues from the first uncleared stave overall.
+
 | Stave | Stage | Track | Map page | Waves |
 |-------|-------|-------|----------|-------|
 | 1 | The Truth from Above | The Truth from Above | Carol 1: Marley | Jazz |

@@ -15,7 +15,7 @@ Drop legally usable mp3/ogg files into `repertoire/` using prefixes:
 See `repertoire/README.md` for HGC2627 mood mapping.
 
 ## A Christmas Carol loops
-One file per stave in `carol/`, cut from the Harvard Glee Club recording of A Christmas Carol (track numbers 01 to 30). New loops follow the same format as the other stage files: 44.1 kHz stereo MP3 at 96 kbps CBR, about 1:40 to 1:50 (shorter tracks loop the whole movement), loudness matched to about -18 LUFS, with a 4 s equal-power crossfade from the end of the excerpt into its start so `<audio loop>` wraps without a gap. Where a short movement has a silent pause between sections, the pause is bridged with the same crossfade. The five original files are unchanged.
+One file per stave in `carol/`, cut from the Harvard Glee Club recording of A Christmas Carol (track numbers 01 to 30). Loops follow the same format as the other stage files: 44.1 kHz stereo MP3 at 96 kbps CBR, about 1:40 to 1:50 (shorter tracks loop the whole movement), loudness matched to about -18 LUFS, with a 4 s equal-power crossfade from the end of the excerpt into its start so `<audio loop>` wraps without a gap (God Bless Us, Every One uses a shorter fade, because the documented excerpt leaves only a little tail). Where a short movement has a silent pause between sections, the pause is bridged with the same crossfade.
 
 | Stave | File | Track | Excerpt | Loop |
 |-------|------|-------|---------|------|

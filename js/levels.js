@@ -1128,19 +1128,27 @@
     return p.cleared.includes(CAROL_ACT.unlockAfter);
   }
 
-  // The first Carol stave not yet cleared (the one the player is working on), or null once
-  // the act is done or before Closing Night is cleared.
+  // The stave the player is working on: the first uncleared stave after the last cleared
+  // Carol stave. If nothing is left ahead, this falls back to the first uncleared stave
+  // overall. Null once the act is done, or before Closing Night is cleared.
   function carolFrontier(progressOpt) {
     const p = progressOpt || loadProgress();
     if (!isCarolUnlocked(p)) return null;
+    let last = -1;
+    for (let i = 0; i < CAROL_LEVELS.length; i++) {
+      if (p.cleared.includes(CAROL_LEVELS[i].id)) last = i;
+    }
+    for (let i = last + 1; i < CAROL_LEVELS.length; i++) {
+      if (!p.cleared.includes(CAROL_LEVELS[i].id)) return CAROL_LEVELS[i];
+    }
     return CAROL_LEVELS.find((l) => !p.cleared.includes(l.id)) || null;
   }
 
   // One rule for every stage: main stages use the saved count, Encore follows
-  // isEndlessUnlocked, and Carol staves open one at a time in order: a stave is open when it is
-  // cleared or it is the first uncleared stave (and Closing Night is cleared). Saves from the
-  // five-stave act keep their cleared staves open for replay and continue from the first new
-  // stave before them.
+  // isEndlessUnlocked, and Carol staves open one at a time: a stave is open when it is
+  // cleared (for replay) or it is the current frontier (and Closing Night is cleared).
+  // Saves from the five-stave act keep their cleared staves open and continue from the
+  // first uncleared stave after the last one they cleared.
   function isLevelUnlocked(levelOrId, progressOpt) {
     const level = typeof levelOrId === 'object' && levelOrId ? levelOrId : getLevel(levelOrId);
     if (!level) return false;

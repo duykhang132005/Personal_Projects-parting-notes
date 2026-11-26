@@ -293,9 +293,10 @@
         return 'Clear Closing Night to open A Christmas Carol.';
       }
       const prev = level.actIndex > 0 ? PNLevels.CAROL_LEVELS[level.actIndex - 1] : null;
-      // Older saves can have a cleared stave here with an uncleared one earlier in the act.
       const frontier = PNLevels.carolFrontier ? PNLevels.carolFrontier(progress) : null;
-      if (prev && progress.cleared.includes(prev.id) && frontier) {
+      // Point at the current frontier, including when an older save has cleared a later
+      // stave and left earlier ones closed.
+      if (frontier) {
         return 'Clear ' + frontier.name + ' first to open this stave.';
       }
       return prev ? 'Clear ' + prev.name + ' to open this stave.' : 'Clear Closing Night to open A Christmas Carol.';
@@ -511,9 +512,11 @@
     const progress = PNLevels.loadProgress();
     const all = PNLevels.LEVELS;
     const carol = (PNLevels.CAROL_LEVELS || []).filter((lv) => levelUnlocked(lv, progress));
+    // After Closing Night, land on the Carol frontier (the first uncleared stave after
+    // the last cleared one), not the first uncleared stave in the act.
     const target =
       all.find((lv) => !progress.cleared.includes(lv.id)) ||
-      carol.find((lv) => !progress.cleared.includes(lv.id)) ||
+      (PNLevels.carolFrontier && PNLevels.carolFrontier(progress)) ||
       carol[carol.length - 1] ||
       all[all.length - 1];
     if (!target) return null;
@@ -789,13 +792,8 @@
     requestAnimationFrame(() => paintDictionaryIcons());
   }
 
-  function paintTitleArt() {
-    /* splash: assets/title-splash.webp with the PNG as fallback (index.html, styles.css) */
-  }
-
   global.PNUI = {
     showScreen,
-    paintTitleArt,
     renderHud,
     renderRecords,
     syncShop,
